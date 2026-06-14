@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Rejsedagbog</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #F4EFE4; min-height: 100vh; }
+    #app { max-width: 480px; margin: 0 auto; min-height: 100vh; }
+
+    /* Lock screen */
+    .lock-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #F4EFE4; }
+    .lock-box { background: #fff; border-radius: 16px; padding: 28px 24px; width: 300px; border: 1px solid #E3D9C5; }
+    .lock-title { font-family: Georgia, serif; font-size: 20px; text-align: center; color: #2F2A22; margin-bottom: 16px; }
+    .lock-error { color: #B5532C; font-size: 13px; text-align: center; margin-top: 8px; }
+
+    /* Header */
+    .header { background: #3F5E55; padding: 14px 12px; display: flex; align-items: center; gap: 8px; position: sticky; top: 0; z-index: 10; }
+    .header-title { flex: 1; text-align: center; }
+    .header-title h2 { font-family: Georgia, serif; font-size: 17px; color: #fff; }
+    .header-title p { font-size: 11px; color: #D9C9A8; font-family: monospace; }
+    .start-header { padding: 28px 18px 18px; }
+    .start-header .eyebrow { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #B5532C; font-weight: 700; margin-bottom: 6px; }
+    .start-header h1 { font-family: Georgia, serif; font-size: 32px; color: #2F2A22; }
+
+    /* Tabs */
+    .tab-bar { display: flex; background: #fff; border-bottom: 1px solid #E3D9C5; position: sticky; top: 56px; z-index: 9; }
+    .tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px 0; background: none; border: none; cursor: pointer; font-size: 11px; color: #9C8B6E; gap: 3px; position: relative; }
+    .tab-btn.active { color: #B5532C; font-weight: 600; }
+    .tab-btn.active::after { content: ''; position: absolute; bottom: 0; left: 25%; right: 25%; height: 2px; background: #B5532C; }
+    .tab-icon { font-size: 20px; }
+
+    /* Content */
+    .content { padding: 16px; padding-bottom: 80px; }
+
+    /* Buttons */
+    .btn-primary { background: #B5532C; color: #fff; border: none; border-radius: 10px; padding: 12px 16px; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; }
+    .btn-secondary { background: #fff; color: #5A4A3A; border: 1px solid #E3D9C5; border-radius: 10px; padding: 12px 16px; font-size: 15px; font-weight: 600; cursor: pointer; flex: 1; }
+    .btn-small { background: #3F5E55; color: #fff; border: none; border-radius: 8px; padding: 0 16px; height: 42px; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .btn-ghost { background: none; border: 1px dashed #C9B896; border-radius: 12px; padding: 16px; color: #5A4A3A; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 16px; }
+    .btn-outline { background: #fff; color: #5A4A3A; border: 1px solid #E3D9C5; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-icon { background: rgba(255,255,255,0.15); border: none; border-radius: 8px; width: 36px; height: 36px; color: #fff; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+    .btn-trash { background: none; border: none; color: #B5A98F; cursor: pointer; font-size: 16px; padding: 4px; }
+
+    /* Inputs */
+    .input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #E3D9C5; background: #fff; font-size: 15px; color: #2F2A22; font-family: inherit; }
+    .input-sm { flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid #E3D9C5; background: #fff; font-size: 13px; color: #2F2A22; font-family: inherit; min-width: 0; }
+    .input-row { display: flex; gap: 8px; margin-top: 8px; }
+    textarea.input { min-height: 70px; resize: vertical; }
+
+    /* Field */
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 11px; color: #9C8B6E; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+
+    /* Cards */
+    .card { background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 1px solid #E3D9C5; }
+    .card-header { display: flex; align-items: center; margin-bottom: 10px; }
+
+    /* Trip list */
+    .trip-card { display: flex; align-items: center; gap: 14px; background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid #E3D9C5; cursor: pointer; }
+    .trip-stamp { width: 48px; height: 48px; border-radius: 10px; border: 2px solid #B5532C; color: #B5532C; display: flex; align-items: center; justify-content: center; font-family: monospace; font-weight: 700; font-size: 13px; flex-shrink: 0; transform: rotate(-4deg); }
+    .trip-name { font-family: Georgia, serif; font-size: 19px; color: #2F2A22; }
+    .trip-dest { font-size: 13px; color: #8A7A63; margin-top: 2px; }
+    .trip-dates { font-size: 12px; color: #B5A98F; margin-top: 4px; font-family: monospace; }
+
+    /* Section title */
+    .section-title { font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: #9C8B6E; font-weight: 700; margin-bottom: 10px; margin-top: 4px; }
+
+    /* Chips */
+    .chip { display: inline-flex; align-items: center; background: #fff; border: 1px solid #E3D9C5; border-radius: 20px; padding: 6px 12px; font-size: 13px; color: #5A4A3A; margin: 0 6px 6px 0; }
+    .chip-x { background: none; border: none; color: #B5A98F; cursor: pointer; margin-left: 6px; font-size: 14px; }
+
+    /* Place row */
+    .place-row { display: flex; align-items: center; background: #fff; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; border: 1px solid #EFE8D9; gap: 10px; }
+    .place-row-info { flex: 1; min-width: 0; }
+    .place-name { font-family: Georgia, serif; font-size: 16px; color: #2F2A22; }
+    .place-note { font-size: 13px; color: #8A7A63; margin-top: 3px; }
+    .place-date { font-size: 11px; color: #B5A98F; margin-top: 3px; font-family: monospace; }
+
+    /* Cat pills */
+    .cat-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+    .cat-pill { border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+    /* Budget */
+    .budget-box { background: #fff; border-radius: 14px; padding: 16px; border: 1px solid #E3D9C5; margin-bottom: 24px; }
+    .budget-row { display: flex; justify-content: space-between; margin-top: 14px; padding-top: 14px; border-top: 1px dashed #D9C9A8; }
+    .budget-label { font-size: 11px; color: #9C8B6E; text-transform: uppercase; letter-spacing: 0.1em; }
+    .budget-amount { font-family: Georgia, serif; font-size: 22px; color: #2F2A22; }
+    .budget-amount.positive { color: #3F5E55; }
+    .budget-amount.negative { color: #B5532C; }
+    .progress-track { height: 6px; background: #F0E9D8; border-radius: 4px; margin-top: 14px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+    .expense-row { display: flex; align-items: center; background: #fff; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; border: 1px solid #EFE8D9; }
+    .expense-cat { font-size: 12px; color: #B5A98F; margin-top: 2px; }
+    .expense-amount { font-family: monospace; font-size: 15px; color: #5A4A3A; margin-right: 8px; white-space: nowrap; }
+
+    /* Photos */
+    .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+    .photo-card { background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #E3D9C5; }
+    .photo-wrap { position: relative; }
+    .photo-wrap img { width: 100%; height: 130px; object-fit: cover; display: block; }
+    .photo-del { position: absolute; top: 6px; right: 6px; background: rgba(47,42,34,0.6); border: none; border-radius: 6px; width: 26px; height: 26px; color: #fff; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+    .photo-caption { width: 100%; border: none; padding: 8px 10px; font-size: 12px; color: #5A4A3A; font-family: inherit; background: transparent; }
+
+    /* Empty hint */
+    .empty-hint { color: #B5A98F; font-size: 13px; text-align: center; padding: 30px 20px; line-height: 1.6; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(47,42,34,0.45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+    .modal-box { background: #fff; border-radius: 14px; padding: 20px; width: 100%; max-width: 420px; }
+    .modal-header { display: flex; align-items: center; margin-bottom: 14px; }
+    .modal-title { font-family: Georgia, serif; font-size: 18px; color: #2F2A22; flex: 1; }
+    .modal-close { background: none; border: none; font-size: 20px; color: #9C8B6E; cursor: pointer; }
+    .modal-hint { font-size: 13px; color: #8A7A63; margin-bottom: 12px; line-height: 1.5; }
+    .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+
+    /* Ticket row */
+    .ticket-row { display: flex; align-items: center; font-size: 13px; color: #5A4A3A; margin-bottom: 6px; }
+
+    /* Book */
+    .book-page { background: #FBF8F1; }
+    .book-cover { background: linear-gradient(160deg, #3F5E55, #2F4A42); padding: 60px 30px; text-align: center; }
+    .book-cover .eyebrow { font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: #D9C9A8; margin-bottom: 10px; }
+    .book-cover h1 { font-family: Georgia, serif; font-size: 36px; color: #fff; margin-bottom: 8px; }
+    .book-cover .dest { font-size: 16px; color: #D9C9A8; }
+    .book-cover .dates { font-family: monospace; font-size: 13px; color: #B5A98F; margin-top: 14px; }
+    .book-cover .travelers { font-size: 13px; color: #D9C9A8; margin-top: 14px; }
+    .book-section { padding: 28px 24px; border-bottom: 1px solid #EFE7D6; }
+    .book-heading { display: flex; align-items: center; margin-bottom: 16px; }
+    .book-heading h2 { font-family: Georgia, serif; font-size: 22px; color: #2F2A22; white-space: nowrap; }
+    .book-heading .line { flex: 1; height: 1px; background: #E3D9C5; margin-left: 14px; }
+    .book-subheading { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #9C8B6E; margin-bottom: 8px; font-weight: 700; }
+    .facts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; }
+    .fact-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #9C8B6E; }
+    .fact-value { font-family: Georgia, serif; font-size: 17px; color: #2F2A22; margin-top: 2px; }
+    .book-photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+    .book-photo { width: 100%; height: 140px; object-fit: cover; border-radius: 6px; display: block; }
+    .book-caption { font-size: 11px; color: #9C8B6E; margin-top: 4px; font-style: italic; }
+    .book-place { display: flex; align-items: flex-start; margin-top: 12px; gap: 10px; }
+    .book-budget-row { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; border-bottom: 1px solid #F0E9D8; }
+    .book-footer { text-align: center; padding: 30px 0 20px; color: #B5A98F; font-size: 12px; font-family: monospace; }
+
+    /* Sync indicator */
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #6FCF97; display: inline-block; margin-left: 6px; }
+    .sync-dot.syncing { background: #F2994A; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    @media print {
+      .header, .tab-bar, .no-print { display: none !important; }
+      body { background: white; }
+    }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const SUPABASE_URL = https://wwugsvsznrsupkjqingw.supabase.co
+const SUPABASE_KEY = sb_publishable_vpuARxHJiq-eWNeF5iVonQ_cMRwkgST
+const APP_PASSWORD = Sommerferie2026
+// ──────────────────────────────────────────────────────────────────────────────
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function uid() { return Math.random().toString(36).slice(2, 10); }
+function fmtDate(d) {
+  if (!d) return "";
+  return new Date(d + "T00:00:00").toLocaleDateString("da-DK", { weekday: "short", day: "numeric", month: "short" });
+}
+function fmtDateLong(d) {
+  if (!d) return "";
+  return new Date(d + "T00:00:00").toLocaleDateString("da-DK", { day: "numeric", month: "long", year: "numeric" });
+}
+function h(tag, attrs, ...children) {
+  const el = document.createElement(tag);
+  if (attrs) Object.entries(attrs).forEach(([k, v]) => {
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k === "style" && typeof v === "object") Object.assign(el.style, v);
+    else el.setAttribute(k, v);
+  });
+  children.flat(Infinity).forEach(c => {
+    if (c == null || c === false) return;
+    el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  });
+  return el;
+}
+function icon(name) {
+  const icons = {
+    plane: "✈️", train: "🚂", map: "📍", camera: "📷", wallet: "💰", book: "📖",
+    plus: "＋", trash: "🗑", x: "✕", back: "‹", restaurant: "🍽", sight: "🏛",
+    wine: "🍷", hotel: "🏨", home: "🏠", other: "✦", fly: "✈️"
+  };
+  return icons[name] || "•";
+}
+
+const CATS = {
+  restaurant: { label: "Restaurant", emoji: "🍽", color: "#B5532C" },
+  seværdighed: { label: "Seværdighed", emoji: "🏛", color: "#3F5E55" },
+  vinbar: { label: "Vinbar / bar", emoji: "🍷", color: "#7A3B45" },
+  hotel: { label: "Hotel", emoji: "🏨", color: "#5A4A3A" },
+  hus: { label: "Hus", emoji: "🏠", color: "#6B5B3E" },
+  andet: { label: "Andet", emoji: "✦", color: "#9C8B6E" },
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let state = {
+  unlocked: sessionStorage.getItem("rjb_unlocked") === "yes",
+  trips: [],
+  activeTrip: null,
+  tab: "oversigt",
+  bookMode: false,
+  loaded: false,
+  syncing: false,
+};
+let saveTimeout = null;
+
+function setState(patch) {
+  Object.assign(state, typeof patch === "function" ? patch(state) : patch);
+  render();
+}
+
+// ─── SUPABASE ─────────────────────────────────────────────────────────────────
+async function loadTrips() {
+  const { data, error } = await db.from("trips_data").select("data").eq("id", 1).single();
+  if (!error && data) setState({ trips: data.data || [], loaded: true });
+  else setState({ loaded: true });
+}
+
+function saveTrips(trips) {
+  clearTimeout(saveTimeout);
+  setState({ syncing: true });
+  saveTimeout = setTimeout(async () => {
+    await db.from("trips_data").update({ data: trips, updated_at: new Date().toISOString() }).eq("id", 1);
+    setState({ syncing: false });
+  }, 600);
+}
+
+function setupRealtime() {
+  db.channel("trips_realtime")
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "trips_data" }, payload => {
+      if (payload.new && payload.new.data) setState({ trips: payload.new.data });
+    })
+    .subscribe();
+}
+
+function updateTrips(fn) {
+  const updated = fn([...state.trips]);
+  setState({ trips: updated });
+  saveTrips(updated);
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function render() {
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+
+  if (!state.unlocked) { app.appendChild(renderLock()); return; }
+  if (!state.loaded) { app.appendChild(h("div", { class: "lock-screen" }, h("div", { style: { fontFamily: "Georgia, serif", fontSize: 22, color: "#5A4A3A" } }, "Henter rejser…"))); return; }
+  if (state.bookMode && state.activeTrip) { app.appendChild(renderBook()); return; }
+  if (!state.activeTrip) { app.appendChild(renderTripList()); return; }
+  app.appendChild(renderTripApp());
+}
+
+// ─── LOCK ─────────────────────────────────────────────────────────────────────
+function renderLock() {
+  let pw = "";
+  const err = h("div", { class: "lock-error" });
+  const input = h("input", { type: "password", class: "input", placeholder: "Adgangskode", style: { marginBottom: "12px" } });
+  input.addEventListener("input", e => pw = e.target.value);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") tryUnlock(); });
+  const btn = h("button", { class: "btn-primary", onClick: tryUnlock }, "Åbn");
+
+  function tryUnlock() {
+    if (pw === APP_PASSWORD) {
+      sessionStorage.setItem("rjb_unlocked", "yes");
+      setState({ unlocked: true });
+      loadTrips();
+      setupRealtime();
+    } else {
+      err.textContent = "Forkert kode – prøv igen";
+    }
+  }
+
+  return h("div", { class: "lock-screen" },
+    h("div", { class: "lock-box" },
+      h("div", { class: "lock-title" }, "🗺 Rejsedagbog"),
+      input, err, btn
+    )
+  );
+}
+
+// ─── TRIP LIST ────────────────────────────────────────────────────────────────
+function renderTripList() {
+  let showNew = state.trips.length === 0;
+  let name = "", dest = "", start = "", end = "";
+
+  const list = h("div", {});
+  const syncDot = h("span", { class: "sync-dot" + (state.syncing ? " syncing" : "") });
+
+  function refresh() {
+    list.innerHTML = "";
+
+    // Save/load row
+    list.appendChild(h("div", { style: { display: "flex", gap: "8px", marginBottom: "16px" } },
+      h("button", { class: "btn-outline", onClick: doExport }, "💾 Gem data"),
+      h("button", { class: "btn-outline", onClick: doImport }, "📂 Indlæs data"),
+    ));
+
+    state.trips.forEach(t => {
+      list.appendChild(h("div", { class: "trip-card", onClick: () => setState({ activeTrip: t.id, tab: "oversigt" }) },
+        h("div", { class: "trip-stamp" }, (t.destination || "???").slice(0, 3).toUpperCase()),
+        h("div", { style: { flex: 1 } },
+          h("div", { class: "trip-name" }, t.name || "Unavngiven rejse"),
+          h("div", { class: "trip-dest" }, t.destination),
+          (t.start || t.end) ? h("div", { class: "trip-dates" }, fmtDate(t.start) + (t.end ? " → " + fmtDate(t.end) : "")) : null
+        ),
+        h("button", { class: "btn-trash", onClick: e => { e.stopPropagation(); if (confirm("Slet rejsen?")) updateTrips(ts => ts.filter(x => x.id !== t.id)); } }, "🗑")
+      ));
+    });
+
+    if (!showNew) {
+      list.appendChild(h("button", { class: "btn-ghost", onClick: () => { showNew = true; refresh(); } }, "＋ Ny rejse"));
+    } else {
+      const nameI = h("input", { class: "input", placeholder: "Navn på rejsen (f.eks. Vintur til Bourgogne)", style: { marginBottom: "10px" } });
+      nameI.addEventListener("input", e => name = e.target.value);
+      const destI = h("input", { class: "input", placeholder: "Destination", style: { marginBottom: "10px" } });
+      destI.addEventListener("input", e => dest = e.target.value);
+      const startI = h("input", { type: "date", class: "input", style: { marginBottom: "10px" } });
+      startI.addEventListener("input", e => start = e.target.value);
+      const endI = h("input", { type: "date", class: "input", style: { marginBottom: "10px" } });
+      endI.addEventListener("input", e => end = e.target.value);
+
+      list.appendChild(h("div", { class: "card" },
+        h("div", { style: { fontFamily: "Georgia, serif", fontSize: 18, marginBottom: 14, color: "#2F2A22" } }, "Ny rejse"),
+        h("div", { class: "field" }, h("label", {}, "Navn"), nameI),
+        h("div", { class: "field" }, h("label", {}, "Destination"), destI),
+        h("div", { style: { display: "flex", gap: "10px" } },
+          h("div", { class: "field", style: { flex: 1 } }, h("label", {}, "Fra"), startI),
+          h("div", { class: "field", style: { flex: 1 } }, h("label", {}, "Til"), endI),
+        ),
+        h("div", { class: "btn-row" },
+          h("button", { class: "btn-secondary", onClick: () => { showNew = false; refresh(); } }, "Annuller"),
+          h("button", { class: "btn-primary", style: { flex: 1 }, onClick: () => {
+            if (!name || !dest) return;
+            const trip = { id: uid(), name, destination: dest, start, end, budget: "", stops: [], travelers: [], tickets: [], places: [], expenses: [], photos: [] };
+            updateTrips(ts => [...ts, trip]);
+            setState({ activeTrip: trip.id, tab: "oversigt" });
+          }}, "Opret rejse")
+        )
+      ));
+    }
+  }
+
+  function doExport() {
+    const json = JSON.stringify(state.trips, null, 2);
+    const ta = h("textarea", { style: { width: "100%", height: "160px", fontFamily: "monospace", fontSize: 11, border: "1px solid #E3D9C5", borderRadius: "8px", padding: "10px" } });
+    ta.value = json;
+    const overlay = h("div", { class: "modal-overlay" },
+      h("div", { class: "modal-box" },
+        h("div", { class: "modal-header" },
+          h("div", { class: "modal-title" }, "Gem data"),
+          h("button", { class: "modal-close", onClick: () => overlay.remove() }, "✕")
+        ),
+        h("div", { class: "modal-hint" }, "Kopier teksten og gem den i Notes på din telefon. Brug 'Indlæs data' næste gang for at hente den tilbage."),
+        ta,
+        h("button", { class: "btn-primary", style: { marginTop: "10px" }, onClick: () => {
+          navigator.clipboard.writeText(json).then(() => alert("Kopieret! ✓")).catch(() => { ta.select(); document.execCommand("copy"); alert("Kopieret! ✓"); });
+        }}, "Kopier til udklipsholder")
+      )
+    );
+    document.body.appendChild(overlay);
+  }
+
+  function doImport() {
+    const ta = h("textarea", { style: { width: "100%", height: "160px", fontFamily: "monospace", fontSize: 11, border: "1px solid #E3D9C5", borderRadius: "8px", padding: "10px" }, placeholder: "Indsæt tekst her…" });
+    const overlay = h("div", { class: "modal-overlay" },
+      h("div", { class: "modal-box" },
+        h("div", { class: "modal-header" },
+          h("div", { class: "modal-title" }, "Indlæs data"),
+          h("button", { class: "modal-close", onClick: () => overlay.remove() }, "✕")
+        ),
+        h("div", { class: "modal-hint" }, "Indsæt den tekst du kopierede med 'Gem data'."),
+        ta,
+        h("button", { class: "btn-primary", style: { marginTop: "10px" }, onClick: () => {
+          try {
+            const data = JSON.parse(ta.value);
+            if (Array.isArray(data)) { updateTrips(() => data); overlay.remove(); }
+            else alert("Ugyldig data");
+          } catch { alert("Kunne ikke læse teksten"); }
+        }}, "Indlæs")
+      )
+    );
+    document.body.appendChild(overlay);
+  }
+
+  refresh();
+
+  return h("div", {},
+    h("div", { class: "start-header" },
+      h("div", { class: "eyebrow" }, "Rejsedagbog"),
+      h("div", { style: { display: "flex", alignItems: "center" } },
+        h("h1", { style: { fontFamily: "Georgia, serif", fontSize: "32px", color: "#2F2A22" } }, "Jeres rejser"),
+        syncDot
+      )
+    ),
+    h("div", { style: { padding: "0 16px 80px" } }, list)
+  );
+}
+
+// ─── TRIP APP ─────────────────────────────────────────────────────────────────
+function renderTripApp() {
+  const trip = state.trips.find(t => t.id === state.activeTrip);
+  if (!trip) return h("div", {});
+
+  const tabs = [
+    { id: "oversigt", label: "Oversigt", emoji: "✈️" },
+    { id: "steder", label: "Steder", emoji: "📍" },
+    { id: "budget", label: "Budget", emoji: "💰" },
+    { id: "billeder", label: "Billeder", emoji: "📷" },
+  ];
+
+  function updateTrip(fn) {
+    updateTrips(ts => ts.map(t => t.id === trip.id ? fn({ ...t }) : t));
+  }
+
+  const tabContent = h("div", { class: "content" });
+  function renderTab() {
+    tabContent.innerHTML = "";
+    if (state.tab === "oversigt") tabContent.appendChild(renderOversigt(trip, updateTrip));
+    else if (state.tab === "steder") tabContent.appendChild(renderSteder(trip, updateTrip));
+    else if (state.tab === "budget") tabContent.appendChild(renderBudget(trip, updateTrip));
+    else if (state.tab === "billeder") tabContent.appendChild(renderBilleder(trip, updateTrip));
+  }
+  renderTab();
+
+  const tabBar = h("div", { class: "tab-bar" },
+    ...tabs.map(t => {
+      const btn = h("button", { class: "tab-btn" + (state.tab === t.id ? " active" : ""), onClick: () => { state.tab = t.id; renderTab(); tabBar.querySelectorAll(".tab-btn").forEach((b, i) => b.className = "tab-btn" + (tabs[i].id === t.id ? " active" : "")); } },
+        h("span", { class: "tab-icon" }, t.emoji),
+        t.label
+      );
+      return btn;
+    })
+  );
+
+  return h("div", {},
+    h("div", { class: "header" },
+      h("button", { class: "btn-icon", onClick: () => setState({ activeTrip: null }) }, "‹"),
+      h("div", { class: "header-title" },
+        h("h2", {}, trip.name || "Rejse"),
+        h("p", {}, trip.destination)
+      ),
+      h("button", { class: "btn-icon", title: "Lav rejsebog", onClick: () => setState({ bookMode: true }) }, "📖")
+    ),
+    tabBar,
+    tabContent
+  );
+}
+
+// ─── OVERSIGT TAB ─────────────────────────────────────────────────────────────
+function renderOversigt(trip, updateTrip) {
+  const wrap = h("div", {});
+  let travelerInput = "";
+
+  // Travelers
+  const travelerChips = h("div", { style: { display: "flex", flexWrap: "wrap", marginBottom: "14px" } });
+  function refreshChips() {
+    travelerChips.innerHTML = "";
+    trip.travelers.forEach(n => {
+      travelerChips.appendChild(h("span", { class: "chip" }, n,
+        h("button", { class: "chip-x", onClick: () => { updateTrip(t => { t.travelers = t.travelers.filter(x => x !== n); return t; }); trip.travelers = trip.travelers.filter(x => x !== n); refreshChips(); } }, "✕")
+      ));
+    });
+  }
+  refreshChips();
+
+  const tInput = h("input", { class: "input", placeholder: "Navn (f.eks. Louise)", style: { flex: 1 } });
+  tInput.addEventListener("input", e => travelerInput = e.target.value);
+  tInput.addEventListener("keydown", e => { if (e.key === "Enter") addTraveler(); });
+
+  function addTraveler() {
+    if (!travelerInput.trim()) return;
+    updateTrip(t => { t.travelers = [...t.travelers, travelerInput.trim()]; return t; });
+    trip.travelers = [...trip.travelers, travelerInput.trim()];
+    tInput.value = ""; travelerInput = "";
+    refreshChips();
+  }
+
+  // Stops
+  const stopsWrap = h("div", {});
+  function refreshStops() {
+    stopsWrap.innerHTML = "";
+    if (trip.stops.length === 0) stopsWrap.appendChild(h("div", { class: "empty-hint" }, "Tilføj de steder I bor – f.eks. 5 dage i Cobisa, 2 dage i Madrid."));
+    trip.stops.forEach((s, i) => {
+      const placeI = h("input", { class: "input", placeholder: "Sted (f.eks. Cobisa)", value: s.place, style: { marginBottom: "8px" } });
+      placeI.addEventListener("input", e => { s.place = e.target.value; updateTrip(t => { t.stops = t.stops.map(x => x.id === s.id ? s : x); return t; }); });
+      const startI = h("input", { type: "date", class: "input-sm", value: s.start });
+      startI.addEventListener("input", e => { s.start = e.target.value; updateTrip(t => { t.stops = t.stops.map(x => x.id === s.id ? s : x); return t; }); });
+      const endI = h("input", { type: "date", class: "input-sm", value: s.end });
+      endI.addEventListener("input", e => { s.end = e.target.value; updateTrip(t => { t.stops = t.stops.map(x => x.id === s.id ? s : x); return t; }); });
+      const accI = h("input", { class: "input", placeholder: "Bolig / hotel navn", value: s.accommodation, style: { marginBottom: "8px" } });
+      accI.addEventListener("input", e => { s.accommodation = e.target.value; updateTrip(t => { t.stops = t.stops.map(x => x.id === s.id ? s : x); return t; }); });
+      const linkI = h("input", { class: "input", placeholder: "Link til booking", value: s.link });
+      linkI.addEventListener("input", e => { s.link = e.target.value; updateTrip(t => { t.stops = t.stops.map(x => x.id === s.id ? s : x); return t; }); });
+
+      stopsWrap.appendChild(h("div", { class: "card" },
+        h("div", { class: "card-header" },
+          h("span", {}, "🏠"),
+          h("span", { style: { fontFamily: "Georgia, serif", fontSize: "15px", marginLeft: "8px" } }, "Stop " + (i + 1)),
+          h("button", { class: "btn-trash", style: { marginLeft: "auto" }, onClick: () => { updateTrip(t => { t.stops = t.stops.filter(x => x.id !== s.id); return t; }); trip.stops = trip.stops.filter(x => x.id !== s.id); refreshStops(); } }, "🗑")
+        ),
+        placeI,
+        h("div", { class: "input-row" }, startI, endI),
+        h("div", { style: { marginTop: "8px" } }, accI),
+        linkI
+      ));
+    });
+  }
+  refreshStops();
+
+  // Tickets
+  const ticketsWrap = h("div", {});
+  function refreshTickets() {
+    ticketsWrap.innerHTML = "";
+    if (trip.tickets.length === 0) ticketsWrap.appendChild(h("div", { class: "empty-hint" }, "Tilføj fly- og togbilletter samlet ét sted."));
+    trip.tickets.forEach(tk => {
+      const fromI = h("input", { class: "input-sm", placeholder: "Fra", value: tk.from });
+      fromI.addEventListener("input", e => { tk.from = e.target.value; updateTrip(t => { t.tickets = t.tickets.map(x => x.id === tk.id ? tk : x); return t; }); });
+      const toI = h("input", { class: "input-sm", placeholder: "Til", value: tk.to });
+      toI.addEventListener("input", e => { tk.to = e.target.value; updateTrip(t => { t.tickets = t.tickets.map(x => x.id === tk.id ? tk : x); return t; }); });
+      const dateI = h("input", { type: "date", class: "input-sm", value: tk.date });
+      dateI.addEventListener("input", e => { tk.date = e.target.value; updateTrip(t => { t.tickets = t.tickets.map(x => x.id === tk.id ? tk : x); return t; }); });
+      const timeI = h("input", { type: "time", class: "input-sm", value: tk.time });
+      timeI.addEventListener("input", e => { tk.time = e.target.value; updateTrip(t => { t.tickets = t.tickets.map(x => x.id === tk.id ? tk : x); return t; }); });
+      const refI = h("input", { class: "input", placeholder: "Bookingreference / sæde", value: tk.ref, style: { marginTop: "8px" } });
+      refI.addEventListener("input", e => { tk.ref = e.target.value; updateTrip(t => { t.tickets = t.tickets.map(x => x.id === tk.id ? tk : x); return t; }); });
+
+      ticketsWrap.appendChild(h("div", { class: "card" },
+        h("div", { class: "card-header" },
+          h("span", {}, tk.type === "fly" ? "✈️" : "🚂"),
+          h("span", { style: { fontFamily: "Georgia, serif", fontSize: "15px", marginLeft: "8px" } }, tk.type === "fly" ? "Flybillet" : "Togbillet"),
+          h("button", { class: "btn-trash", style: { marginLeft: "auto" }, onClick: () => { updateTrip(t => { t.tickets = t.tickets.filter(x => x.id !== tk.id); return t; }); trip.tickets = trip.tickets.filter(x => x.id !== tk.id); refreshTickets(); } }, "🗑")
+        ),
+        h("div", { class: "input-row" }, fromI, toI),
+        h("div", { class: "input-row" }, dateI, timeI),
+        refI
+      ));
+    });
+  }
+  refreshTickets();
+
+  wrap.appendChild(h("div", { class: "section-title" }, "Rejsende"));
+  wrap.appendChild(travelerChips);
+  wrap.appendChild(h("div", { style: { display: "flex", gap: "8px", marginBottom: "24px" } }, tInput, h("button", { class: "btn-small", onClick: addTraveler }, "Tilføj")));
+
+  wrap.appendChild(h("div", { class: "section-title" }, "Steder & ophold"));
+  wrap.appendChild(stopsWrap);
+  wrap.appendChild(h("button", { class: "btn-outline", style: { marginBottom: "24px" }, onClick: () => { const s = { id: uid(), place: "", start: "", end: "", accommodation: "", link: "" }; updateTrip(t => { t.stops = [...t.stops, s]; return t; }); trip.stops = [...trip.stops, s]; refreshStops(); } }, "＋ Tilføj ophold"));
+
+  wrap.appendChild(h("div", { class: "section-title" }, "Billetter"));
+  wrap.appendChild(h("div", { style: { display: "flex", gap: "8px", marginBottom: "12px" } },
+    h("button", { class: "btn-outline", onClick: () => { const tk = { id: uid(), type: "fly", from: "", to: "", date: "", time: "", ref: "" }; updateTrip(t => { t.tickets = [...t.tickets, tk]; return t; }); trip.tickets = [...trip.tickets, tk]; refreshTickets(); } }, "✈️ Flybillet"),
+    h("button", { class: "btn-outline", onClick: () => { const tk = { id: uid(), type: "tog", from: "", to: "", date: "", time: "", ref: "" }; updateTrip(t => { t.tickets = [...t.tickets, tk]; return t; }); trip.tickets = [...trip.tickets, tk]; refreshTickets(); } }, "🚂 Togbillet"),
+  ));
+  wrap.appendChild(ticketsWrap);
+
+  return wrap;
+}
+
+// ─── STEDER TAB ───────────────────────────────────────────────────────────────
+function renderSteder(trip, updateTrip) {
+  const wrap = h("div", {});
+  let showForm = false;
+  let draft = { name: "", category: "restaurant", note: "", date: "" };
+
+  const formWrap = h("div", {});
+  const listWrap = h("div", {});
+
+  function refreshList() {
+    listWrap.innerHTML = "";
+    const byCat = {};
+    trip.places.forEach(p => { if (!byCat[p.category]) byCat[p.category] = []; byCat[p.category].push(p); });
+    if (Object.keys(byCat).length === 0 && !showForm) { listWrap.appendChild(h("div", { class: "empty-hint" }, "Gem restauranter, vinbarer og seværdigheder her.")); return; }
+    Object.entries(CATS).forEach(([key, cat]) => {
+      const items = byCat[key] || [];
+      if (items.length === 0) return;
+      listWrap.appendChild(h("div", { style: { marginBottom: "18px" } },
+        h("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" } },
+          h("span", {}, cat.emoji),
+          h("span", { style: { fontSize: "12px", letterSpacing: "0.1em", textTransform: "uppercase", color: cat.color, fontWeight: "700" } }, cat.label)
+        ),
+        ...items.map(p => h("div", { class: "place-row" },
+          h("div", { class: "place-row-info" },
+            h("div", { class: "place-name" }, p.name),
+            p.note ? h("div", { class: "place-note" }, p.note) : null,
+            p.date ? h("div", { class: "place-date" }, fmtDate(p.date)) : null
+          ),
+          h("button", { class: "btn-trash", onClick: () => { updateTrip(t => { t.places = t.places.filter(x => x.id !== p.id); return t; }); trip.places = trip.places.filter(x => x.id !== p.id); refreshList(); } }, "🗑")
+        ))
+      ));
+    });
+  }
+
+  function refreshForm() {
+    formWrap.innerHTML = "";
+    if (!showForm) {
+      formWrap.appendChild(h("button", { class: "btn-ghost", onClick: () => { showForm = true; refreshForm(); } }, "＋ Tilføj sted"));
+      return;
+    }
+    const nameI = h("input", { class: "input", placeholder: "f.eks. Le Bistrot du Vin", style: { marginBottom: "10px" } });
+    nameI.addEventListener("input", e => draft.name = e.target.value);
+    const noteI = h("textarea", { class: "input", placeholder: "Note (hvad var godt, hvad skal man bestille?)", style: { marginBottom: "10px" } });
+    noteI.addEventListener("input", e => draft.note = e.target.value);
+    const dateI = h("input", { type: "date", class: "input", style: { marginBottom: "10px" }, value: draft.date });
+    dateI.addEventListener("input", e => draft.date = e.target.value);
+
+    const pills = h("div", { class: "cat-pills", style: { marginBottom: "10px" } });
+    Object.entries(CATS).forEach(([key, cat]) => {
+      const pill = h("button", { class: "cat-pill", style: { background: draft.category === key ? cat.color : "#F4EFE4", color: draft.category === key ? "#fff" : "#5A4A3A" }, onClick: () => { draft.category = key; refreshForm(); } }, cat.emoji + " " + cat.label);
+      pills.appendChild(pill);
+    });
+
+    formWrap.appendChild(h("div", { class: "card", style: { marginBottom: "16px" } },
+      h("div", { class: "field" }, h("label", {}, "Navn"), nameI),
+      h("div", { class: "field" }, h("label", {}, "Kategori"), pills),
+      h("div", { class: "field" }, h("label", {}, "Dato (valgfri)"), dateI),
+      h("div", { class: "field" }, h("label", {}, "Note"), noteI),
+      h("div", { class: "btn-row" },
+        h("button", { class: "btn-secondary", onClick: () => { showForm = false; draft = { name: "", category: "restaurant", note: "", date: "" }; refreshForm(); } }, "Annuller"),
+        h("button", { class: "btn-primary", style: { flex: 1 }, onClick: () => {
+          if (!draft.name.trim()) return;
+          const place = { id: uid(), ...draft };
+          updateTrip(t => { t.places = [...t.places, place]; return t; });
+          trip.places = [...trip.places, place];
+          showForm = false; draft = { name: "", category: "restaurant", note: "", date: "" };
+          refreshForm(); refreshList();
+        }}, "Gem sted")
+      )
+    ));
+  }
+
+  refreshForm();
+  refreshList();
+  wrap.appendChild(formWrap);
+  wrap.appendChild(listWrap);
+  return wrap;
+}
+
+// ─── BUDGET TAB ───────────────────────────────────────────────────────────────
+function renderBudget(trip, updateTrip) {
+  const wrap = h("div", {});
+  let draft = { desc: "", amount: "", category: "mad", paidBy: "" };
+
+  const total = trip.expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  const budget = parseFloat(trip.budget) || 0;
+  const remaining = budget - total;
+  const pct = budget > 0 ? Math.min(100, (total / budget) * 100) : 0;
+
+  const budgetI = h("input", { type: "number", class: "input", placeholder: "0", value: trip.budget });
+  budgetI.addEventListener("input", e => { trip.budget = e.target.value; updateTrip(t => { t.budget = e.target.value; return t; }); });
+
+  const expList = h("div", {});
+  function refreshExpenses() {
+    expList.innerHTML = "";
+    if (trip.expenses.length > 0) expList.appendChild(h("div", { class: "section-title", style: { marginTop: "24px" } }, "Udgifter"));
+    [...trip.expenses].reverse().forEach(e => {
+      expList.appendChild(h("div", { class: "expense-row" },
+        h("div", { style: { flex: 1 } },
+          h("div", { style: { fontSize: "15px", color: "#2F2A22" } }, e.desc),
+          h("div", { class: "expense-cat" }, e.category + (e.paidBy ? " · " + e.paidBy : ""))
+        ),
+        h("div", { class: "expense-amount" }, e.amount.toLocaleString("da-DK") + " kr"),
+        h("button", { class: "btn-trash", onClick: () => { updateTrip(t => { t.expenses = t.expenses.filter(x => x.id !== e.id); return t; }); trip.expenses = trip.expenses.filter(x => x.id !== e.id); location.reload(); } }, "🗑")
+      ));
+    });
+  }
+
+  const descI = h("input", { class: "input", placeholder: "Hvad var det? (f.eks. Frokost i Beaune)", style: { marginBottom: "8px" } });
+  descI.addEventListener("input", e => draft.desc = e.target.value);
+  const amtI = h("input", { type: "number", class: "input-sm", placeholder: "Beløb (DKK)" });
+  amtI.addEventListener("input", e => draft.amount = e.target.value);
+  const catSel = h("select", { class: "input-sm" },
+    ...["mad", "transport", "ophold", "oplevelser", "andet"].map(c => h("option", { value: c }, c.charAt(0).toUpperCase() + c.slice(1)))
+  );
+  catSel.addEventListener("change", e => draft.category = e.target.value);
+
+  wrap.appendChild(h("div", { class: "section-title" }, "Budget"));
+  wrap.appendChild(h("div", { class: "budget-box" },
+    h("div", { class: "field" }, h("label", {}, "Samlet budget (DKK)"), budgetI),
+    h("div", { class: "budget-row" },
+      h("div", {},
+        h("div", { class: "budget-label" }, "Brugt"),
+        h("div", { class: "budget-amount" }, total.toLocaleString("da-DK") + " kr")
+      ),
+      h("div", { style: { textAlign: "right" } },
+        h("div", { class: "budget-label" }, "Tilbage"),
+        h("div", { class: "budget-amount " + (remaining < 0 ? "negative" : "positive") }, remaining.toLocaleString("da-DK") + " kr")
+      )
+    ),
+    budget > 0 ? h("div", { class: "progress-track" }, h("div", { class: "progress-fill", style: { width: pct + "%", background: total > budget ? "#B5532C" : "#3F5E55" } })) : null
+  ));
+
+  wrap.appendChild(h("div", { class: "section-title" }, "Registrer udgift"));
+  wrap.appendChild(h("div", { class: "card" },
+    descI,
+    h("div", { class: "input-row" }, amtI, catSel),
+    h("button", { class: "btn-primary", style: { marginTop: "10px" }, onClick: () => {
+      if (!draft.desc.trim() || !draft.amount) return;
+      const exp = { id: uid(), ...draft, amount: parseFloat(draft.amount) };
+      updateTrip(t => { t.expenses = [...t.expenses, exp]; return t; });
+      trip.expenses = [...trip.expenses, exp];
+      descI.value = ""; amtI.value = ""; draft = { desc: "", amount: "", category: "mad", paidBy: "" };
+      refreshExpenses();
+    }}, "Tilføj udgift")
+  ));
+
+  refreshExpenses();
+  wrap.appendChild(expList);
+  return wrap;
+}
+
+// ─── BILLEDER TAB ─────────────────────────────────────────────────────────────
+function renderBilleder(trip, updateTrip) {
+  const wrap = h("div", {});
+  const fileInput = h("input", { type: "file", accept: "image/*", multiple: true, style: { display: "none" } });
+  fileInput.addEventListener("change", e => {
+    Array.from(e.target.files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const photo = { id: uid(), src: reader.result, caption: "", date: new Date().toISOString().slice(0, 10) };
+        updateTrip(t => { t.photos = [...t.photos, photo]; return t; });
+        trip.photos = [...trip.photos, photo];
+        refreshPhotos();
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+
+  const photoGrid = h("div", { class: "photo-grid" });
+  function refreshPhotos() {
+    photoGrid.innerHTML = "";
+    if (trip.photos.length === 0) { photoGrid.appendChild(h("div", { class: "empty-hint", style: { gridColumn: "1/-1" } }, "Tilføj billeder undervejs – de bruges i rejsebogen.")); return; }
+    [...trip.photos].reverse().forEach(p => {
+      const capI = h("input", { class: "photo-caption", placeholder: "Billedtekst…", value: p.caption });
+      capI.addEventListener("input", e => { p.caption = e.target.value; updateTrip(t => { t.photos = t.photos.map(x => x.id === p.id ? { ...x, caption: e.target.value } : x); return t; }); });
+      photoGrid.appendChild(h("div", { class: "photo-card" },
+        h("div", { class: "photo-wrap" },
+          h("img", { src: p.src, style: { width: "100%", height: "130px", objectFit: "cover", display: "block" } }),
+          h("button", { class: "photo-del", onClick: () => { updateTrip(t => { t.photos = t.photos.filter(x => x.id !== p.id); return t; }); trip.photos = trip.photos.filter(x => x.id !== p.id); refreshPhotos(); } }, "🗑")
+        ),
+        capI
+      ));
+    });
+  }
+
+  refreshPhotos();
+  wrap.appendChild(fileInput);
+  wrap.appendChild(h("button", { class: "btn-ghost", onClick: () => fileInput.click() }, "📷 Tilføj billeder"));
+  wrap.appendChild(photoGrid);
+  return wrap;
+}
+
+// ─── REJSEBOG ─────────────────────────────────────────────────────────────────
+function renderBook() {
+  const trip = state.trips.find(t => t.id === state.activeTrip);
+  if (!trip) return h("div", {});
+
+  const days = [];
+  if (trip.start && trip.end) {
+    let d = new Date(trip.start + "T00:00:00");
+    const end = new Date(trip.end + "T00:00:00");
+    while (d <= end) { days.push(d.toISOString().slice(0, 10)); d.setDate(d.getDate() + 1); }
+  }
+  const total = trip.expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  const byCat = {};
+  trip.expenses.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + e.amount; });
+
+  const undatedPhotos = trip.photos.filter(p => !days.includes(p.date));
+  const undatedPlaces = trip.places.filter(p => !p.date);
+
+  function bookHeading(text) {
+    return h("div", { class: "book-heading" }, h("h2", {}, text), h("div", { class: "line" }));
+  }
+
+  const sections = [];
+
+  // Cover
+  sections.push(h("div", { class: "book-cover" },
+    h("div", { class: "eyebrow" }, "Rejsedagbog"),
+    h("h1", {}, trip.name || "Rejse"),
+    h("div", { class: "dest" }, trip.destination),
+    (trip.start || trip.end) ? h("div", { class: "dates" }, fmtDateLong(trip.start) + (trip.end ? " – " + fmtDateLong(trip.end) : "")) : null,
+    trip.travelers.length > 0 ? h("div", { class: "travelers" }, trip.travelers.join(" · ")) : null
+  ));
+
+  // Facts
+  const factsGrid = h("div", { class: "facts-grid" });
+  [["Destination", trip.destination || "—"], ["Antal dage", days.length || "—"], ["Rejsende", trip.travelers.join(", ") || "—"], ["Steder besøgt", trip.places.length], ["Billeder", trip.photos.length], ["Samlet forbrug", total.toLocaleString("da-DK") + " kr"]].forEach(([l, v]) => {
+    factsGrid.appendChild(h("div", {}, h("div", { class: "fact-label" }, l), h("div", { class: "fact-value" }, String(v))));
+  });
+
+  const factsSection = h("div", { class: "book-section" }, bookHeading("Rejsefakta"), factsGrid);
+  if (trip.stops.length > 0) {
+    factsSection.appendChild(h("div", { style: { marginTop: "18px" } },
+      h("div", { class: "book-subheading" }, "Ophold"),
+      ...trip.stops.map(s => h("div", { class: "ticket-row" }, "🏠 ", s.place + (s.accommodation ? " — " + s.accommodation : "") + (s.start || s.end ? " (" + fmtDate(s.start) + " – " + fmtDate(s.end) + ")" : "")))
+    ));
+  }
+  if (trip.tickets.length > 0) {
+    factsSection.appendChild(h("div", { style: { marginTop: "18px" } },
+      h("div", { class: "book-subheading" }, "Billetter"),
+      ...trip.tickets.map(tk => h("div", { class: "ticket-row" }, (tk.type === "fly" ? "✈️" : "🚂") + " " + tk.from + " → " + tk.to + (tk.date ? " " + fmtDate(tk.date) : "") + (tk.time ? " kl. " + tk.time : "")))
+    ));
+  }
+  sections.push(factsSection);
+
+  // Days
+  days.forEach((day, i) => {
+    const photos = trip.photos.filter(p => p.date === day);
+    const places = trip.places.filter(p => p.date === day);
+    const tickets = trip.tickets.filter(tk => tk.date === day);
+    if (photos.length === 0 && places.length === 0 && tickets.length === 0) return;
+    const sec = h("div", { class: "book-section" }, bookHeading("Dag " + (i + 1) + " — " + fmtDateLong(day)));
+    tickets.forEach(tk => sec.appendChild(h("div", { class: "ticket-row" }, (tk.type === "fly" ? "✈️" : "🚂") + " " + tk.from + " → " + tk.to + " kl. " + tk.time)));
+    if (photos.length > 0) {
+      const grid = h("div", { class: "book-photo-grid" });
+      photos.forEach(p => { grid.appendChild(h("figure", { style: { margin: 0 } }, h("img", { src: p.src, class: "book-photo" }), p.caption ? h("figcaption", { class: "book-caption" }, p.caption) : null)); });
+      sec.appendChild(grid);
+    }
+    places.forEach(p => { const cat = CATS[p.category]; sec.appendChild(h("div", { class: "book-place" }, h("span", {}, cat.emoji), h("div", {}, h("div", { style: { fontFamily: "Georgia, serif", fontSize: "15px" } }, p.name), p.note ? h("div", { style: { fontSize: "13px", color: "#8A7A63" } }, p.note) : null))); });
+    sections.push(sec);
+  });
+
+  // Undated places
+  if (undatedPlaces.length > 0) {
+    const sec = h("div", { class: "book-section" }, bookHeading("Steder & oplevelser"));
+    Object.entries(CATS).forEach(([key, cat]) => {
+      const items = undatedPlaces.filter(p => p.category === key);
+      if (items.length === 0) return;
+      sec.appendChild(h("div", { style: { marginBottom: "14px" } },
+        h("div", { class: "book-subheading" }, cat.emoji + " " + cat.label),
+        ...items.map(p => h("div", { style: { marginBottom: "8px" } }, h("div", { style: { fontFamily: "Georgia, serif", fontSize: "15px" } }, p.name), p.note ? h("div", { style: { fontSize: "13px", color: "#8A7A63" } }, p.note) : null))
+      ));
+    });
+    sections.push(sec);
+  }
+
+  // Undated photos
+  if (undatedPhotos.length > 0) {
+    const grid = h("div", { class: "book-photo-grid" });
+    undatedPhotos.forEach(p => { grid.appendChild(h("figure", { style: { margin: 0 } }, h("img", { src: p.src, class: "book-photo" }), p.caption ? h("figcaption", { class: "book-caption" }, p.caption) : null)); });
+    sections.push(h("div", { class: "book-section" }, bookHeading("Billeder"), grid));
+  }
+
+  // Budget
+  const budgetSec = h("div", { class: "book-section" }, bookHeading("Budget"),
+    h("div", { class: "facts-grid" },
+      h("div", {}, h("div", { class: "fact-label" }, "Budget"), h("div", { class: "fact-value" }, trip.budget ? parseFloat(trip.budget).toLocaleString("da-DK") + " kr" : "—")),
+      h("div", {}, h("div", { class: "fact-label" }, "Forbrug"), h("div", { class: "fact-value" }, total.toLocaleString("da-DK") + " kr")),
+    )
+  );
+  Object.entries(byCat).forEach(([cat, amt]) => {
+    budgetSec.appendChild(h("div", { class: "book-budget-row" }, h("span", {}, cat), h("span", { style: { fontFamily: "monospace" } }, amt.toLocaleString("da-DK") + " kr")));
+  });
+  sections.push(budgetSec);
+  sections.push(h("div", { class: "book-footer" }, "— Lavet med jeres rejsedagbog —"));
+
+  return h("div", {},
+    h("div", { class: "header no-print" },
+      h("button", { class: "btn-icon", onClick: () => setState({ bookMode: false }) }, "‹"),
+      h("div", { class: "header-title" }, h("h2", {}, "Rejsebog")),
+      h("button", { class: "btn-icon", onClick: () => window.print() }, "🖨")
+    ),
+    h("div", { class: "book-page" }, ...sections)
+  );
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+if (state.unlocked) { loadTrips(); setupRealtime(); }
+render();
+</script>
+</body>
+</html>
