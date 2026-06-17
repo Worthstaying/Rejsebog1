@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Rejsedagbog</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  --cream: #F7F2E8;
+  --cream2: #EFE8D5;
+  --brown: #2F2A22;
+  --brown2: #5A4A3A;
+  --brown3: #8A7A63;
+  --brown4: #B5A98F;
+  --border: #E0D5C0;
+  --green: #3F5E55;
+  --green2: #2F4A42;
+  --red: #B5532C;
+  --gold: #C9A84C;
+  --card: #FFFDF7;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--cream);color:var(--brown);min-height:100vh}
+#app{max-width:480px;margin:0 auto;min-height:100vh}
+
+/* ── LOCK ── */
+.lock{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(160deg,var(--green2),var(--green))}
+.lock-box{background:rgba(255,255,255,0.08);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:36px 28px;width:300px;text-align:center}
+.lock-logo{font-size:36px;margin-bottom:12px}
+.lock-title{font-family:Georgia,serif;font-size:24px;color:#fff;margin-bottom:6px}
+.lock-sub{font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:24px}
+.lock-input{width:100%;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#fff;font-size:16px;text-align:center;letter-spacing:0.1em;margin-bottom:12px;font-family:inherit}
+.lock-input::placeholder{color:rgba(255,255,255,0.4)}
+.lock-btn{width:100%;padding:13px;border-radius:12px;border:none;background:#fff;color:var(--green2);font-size:15px;font-weight:700;cursor:pointer}
+.lock-error{font-size:13px;color:#ffb3a0;margin-top:10px}
+
+/* ── HEADER ── */
+.header{background:var(--green);padding:14px 14px;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:20;box-shadow:0 2px 12px rgba(0,0,0,0.15)}
+.header-title{flex:1;text-align:center}
+.header-title h2{font-family:Georgia,serif;font-size:17px;color:#fff}
+.header-title p{font-size:11px;color:rgba(255,255,255,0.6);font-family:monospace;margin-top:1px}
+.hbtn{background:rgba(255,255,255,0.12);border:none;border-radius:10px;width:38px;height:38px;color:#fff;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hbtn:active{background:rgba(255,255,255,0.2)}
+
+/* ── START SCREEN ── */
+.start-bg{background:linear-gradient(160deg,var(--green2) 0%,var(--green) 50%,#4a7a6e 100%);padding:40px 20px 30px}
+.start-eyebrow{font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:8px}
+.start-title{font-family:Georgia,serif;font-size:36px;color:#fff;line-height:1.1;margin-bottom:6px}
+.start-sub{font-size:14px;color:rgba(255,255,255,0.65)}
+.start-wave{width:100%;height:30px;background:var(--cream);clip-path:ellipse(55% 100% at 50% 100%);margin-top:-2px}
+
+/* ── TAB BAR ── */
+.tabbar{display:flex;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:56px;z-index:19}
+.tabbtn{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 8px;background:none;border:none;cursor:pointer;font-size:10px;color:var(--brown3);gap:3px;position:relative;font-family:inherit;transition:color .15s}
+.tabbtn.on{color:var(--red)}
+.tabbtn.on::after{content:'';position:absolute;bottom:0;left:20%;right:20%;height:2px;background:var(--red);border-radius:2px 2px 0 0}
+.tab-icon{font-size:20px}
+
+/* ── CONTENT ── */
+.content{padding:16px;padding-bottom:90px}
+
+/* ── SECTION TITLE ── */
+.sec{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--brown3);font-weight:700;margin:20px 0 10px;display:flex;align-items:center;gap:8px}
+.sec::after{content:'';flex:1;height:1px;background:var(--border)}
+.sec:first-child{margin-top:0}
+
+/* ── CARDS ── */
+.card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,0.04)}
+.card-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.card-icon{font-size:20px}
+.card-label{font-family:Georgia,serif;font-size:15px;color:var(--brown);flex:1}
+
+/* ── INPUTS ── */
+.inp{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--border);background:#fff;font-size:15px;color:var(--brown);font-family:inherit;outline:none;transition:border-color .15s}
+.inp:focus{border-color:var(--green)}
+.inp-sm{flex:1;padding:9px 11px;border-radius:9px;border:1px solid var(--border);background:#fff;font-size:13px;color:var(--brown);font-family:inherit;min-width:0;outline:none}
+.inp-sm:focus{border-color:var(--green)}
+textarea.inp{min-height:70px;resize:vertical}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;color:var(--brown3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px}
+.row{display:flex;gap:8px}
+
+/* ── BUTTONS ── */
+.btn{padding:12px 18px;border-radius:11px;border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:opacity .15s}
+.btn:active{opacity:.8}
+.btn-p{background:var(--red);color:#fff}
+.btn-g{background:var(--green);color:#fff}
+.btn-s{background:#fff;color:var(--brown2);border:1px solid var(--border)}
+.btn-w{width:100%}
+.btn-sm{padding:8px 13px;font-size:13px;border-radius:9px}
+.btn-xs{padding:6px 10px;font-size:12px;border-radius:8px}
+.btn-ghost{background:none;border:1.5px dashed var(--border);border-radius:13px;padding:15px;color:var(--brown3);font-size:14px;font-weight:600;cursor:pointer;width:100%;margin-bottom:14px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-trash{background:none;border:none;color:var(--brown4);cursor:pointer;font-size:16px;padding:4px;flex-shrink:0}
+.btn-row{display:flex;gap:10px;margin-top:14px}
+
+/* ── TRIP LIST ── */
+.trip-card{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid var(--border);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.05);transition:transform .15s,box-shadow .15s}
+.trip-card:active{transform:scale(0.98)}
+.trip-stamp{width:52px;height:52px;border-radius:12px;border:2px solid var(--red);color:var(--red);display:flex;align-items:center;justify-content:center;font-family:monospace;font-weight:700;font-size:12px;flex-shrink:0;transform:rotate(-3deg);background:rgba(181,83,44,0.06)}
+.trip-name{font-family:Georgia,serif;font-size:19px;color:var(--brown)}
+.trip-dest{font-size:13px;color:var(--brown3);margin-top:2px}
+.trip-dates{font-size:12px;color:var(--brown4);margin-top:4px;font-family:monospace}
+.trip-meta{display:flex;gap:12px;margin-top:6px}
+.trip-badge{font-size:11px;color:var(--brown3);background:var(--cream2);border-radius:6px;padding:3px 8px}
+
+/* ── PLACE ROWS ── */
+.place-row{display:flex;align-items:flex-start;background:var(--card);border-radius:11px;padding:13px 14px;margin-bottom:8px;border:1px solid var(--border);gap:10px}
+.place-emoji{font-size:20px;flex-shrink:0;margin-top:1px}
+.place-info{flex:1;min-width:0}
+.place-name{font-family:Georgia,serif;font-size:16px;color:var(--brown)}
+.place-note{font-size:13px;color:var(--brown3);margin-top:3px;line-height:1.4}
+.place-meta{font-size:11px;color:var(--brown4);margin-top:4px;display:flex;gap:10px;flex-wrap:wrap}
+.place-link{font-size:12px;color:var(--green);text-decoration:none;margin-top:4px;display:inline-block}
+.wish-badge{font-size:10px;background:#FFF3CD;color:#8B6914;border-radius:6px;padding:2px 7px;font-weight:600;border:1px solid #F0D070}
+.visited-badge{font-size:10px;background:#E8F5E9;color:#2E7D32;border-radius:6px;padding:2px 7px;font-weight:600;border:1px solid #A5D6A7}
+.move-btn{font-size:11px;background:var(--green);color:#fff;border:none;border-radius:7px;padding:4px 9px;cursor:pointer;margin-top:6px;font-family:inherit}
+
+/* ── CATEGORY PILLS ── */
+.cat-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.cat-pill{border:1.5px solid var(--border);border-radius:9px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:var(--brown2);font-family:inherit;transition:all .15s}
+
+/* ── TICKET ROW ── */
+.ticket-row{display:flex;align-items:center;font-size:13px;color:var(--brown2);margin-bottom:8px;gap:8px;background:var(--cream2);border-radius:9px;padding:10px 12px}
+
+/* ── CHIPS ── */
+.chip{display:inline-flex;align-items:center;background:#fff;border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:13px;color:var(--brown2);margin:0 6px 6px 0}
+.chip-x{background:none;border:none;color:var(--brown4);cursor:pointer;margin-left:6px;font-size:14px}
+
+/* ── BUDGET ── */
+.budget-hero{background:linear-gradient(135deg,var(--green2),var(--green));border-radius:16px;padding:20px;margin-bottom:20px;color:#fff}
+.budget-hero-row{display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px}
+.budget-lbl{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-bottom:4px}
+.budget-val{font-family:Georgia,serif;font-size:26px;color:#fff}
+.budget-val.warn{color:#FFB74D}
+.progress{height:6px;background:rgba(255,255,255,0.2);border-radius:4px;margin-top:14px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;background:#fff;transition:width .4s}
+.progress-fill.over{background:#FF7043}
+.exp-row{display:flex;align-items:center;background:var(--card);border-radius:10px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--border);gap:10px}
+.exp-info{flex:1}
+.exp-desc{font-size:15px;color:var(--brown)}
+.exp-cat{font-size:12px;color:var(--brown4);margin-top:2px}
+.exp-amt{font-family:monospace;font-size:15px;color:var(--brown2);white-space:nowrap}
+
+/* ── PHOTOS ── */
+.photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.photo-card{background:var(--card);border-radius:11px;overflow:hidden;border:1px solid var(--border)}
+.photo-wrap{position:relative}
+.photo-wrap img{width:100%;height:130px;object-fit:cover;display:block}
+.photo-del{position:absolute;top:6px;right:6px;background:rgba(47,42,34,0.65);border:none;border-radius:7px;width:28px;height:28px;color:#fff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+.photo-cap{width:100%;border:none;padding:8px 10px;font-size:12px;color:var(--brown2);font-family:inherit;background:transparent}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:32px 20px;color:var(--brown4);font-size:13px;line-height:1.7}
+.empty-icon{font-size:36px;margin-bottom:10px;display:block;opacity:.5}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(47,42,34,0.5);display:flex;align-items:flex-end;justify-content:center;z-index:100;padding:0}
+.modal{background:var(--card);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto}
+.modal-drag{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+.modal-title{font-family:Georgia,serif;font-size:20px;color:var(--brown);margin-bottom:4px}
+.modal-sub{font-size:13px;color:var(--brown3);margin-bottom:18px;line-height:1.5}
+
+/* ── BOOK ── */
+.book-cover{background:linear-gradient(160deg,#1a3330,var(--green2),var(--green));padding:70px 28px 50px;text-align:center;position:relative}
+.book-cover::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:40px;background:var(--cream);clip-path:ellipse(55% 100% at 50% 100%)}
+.book-eyebrow{font-size:10px;letter-spacing:0.35em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:12px}
+.book-title{font-family:Georgia,serif;font-size:40px;color:#fff;line-height:1.1;margin-bottom:8px}
+.book-dest{font-size:16px;color:rgba(255,255,255,0.75);margin-bottom:16px}
+.book-dates{font-family:monospace;font-size:13px;color:rgba(255,255,255,0.5)}
+.book-travelers{font-size:13px;color:rgba(255,255,255,0.6);margin-top:10px}
+.book-sec{padding:28px 24px;border-bottom:1px solid var(--border)}
+.book-h2{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.book-h2 h2{font-family:Georgia,serif;font-size:22px;color:var(--brown);white-space:nowrap}
+.book-h2-line{flex:1;height:1px;background:var(--border)}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px}
+.fact-lbl{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--brown3)}
+.fact-val{font-family:Georgia,serif;font-size:17px;color:var(--brown);margin-top:2px}
+.book-photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.book-photo{width:100%;height:140px;object-fit:cover;border-radius:8px;display:block}
+.book-cap{font-size:11px;color:var(--brown3);margin-top:4px;font-style:italic}
+.book-place-row{display:flex;align-items:flex-start;gap:10px;margin-top:12px}
+.book-subh{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--brown3);font-weight:700;margin-bottom:8px;margin-top:14px}
+.book-budget-row{display:flex;justify-content:space-between;font-size:14px;padding:7px 0;border-bottom:1px solid var(--cream2)}
+.book-footer{text-align:center;padding:32px 0 20px;color:var(--brown4);font-size:12px;font-family:monospace}
+
+@media print{.header,.tabbar,.no-print{display:none!important}body{background:#fff}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const SUPABASE_URL = "INDSÆT_DIN_SUPABASE_URL";
+const SUPABASE_KEY = "INDSÆT_DIN_SUPABASE_KEY";
+const APP_PASSWORD = "INDSÆT_DIN_KODE";
+
+const{createClient}=supabase;
+const db=createClient(SUPABASE_URL,SUPABASE_KEY);
+
+function uid(){return Math.random().toString(36).slice(2,10)}
+function fmtDate(d){if(!d)return"";return new Date(d+"T00:00:00").toLocaleDateString("da-DK",{weekday:"short",day:"numeric",month:"short"})}
+function fmtDateLong(d){if(!d)return"";return new Date(d+"T00:00:00").toLocaleDateString("da-DK",{day:"numeric",month:"long",year:"numeric"})}
+
+function el(tag,attrs,...kids){
+  const e=document.createElement(tag);
+  if(attrs)Object.entries(attrs).forEach(([k,v])=>{
+    if(k==="cls")e.className=v;
+    else if(k.startsWith("on"))e.addEventListener(k.slice(2).toLowerCase(),v);
+    else if(k==="html")e.innerHTML=v;
+    else e.setAttribute(k,v);
+  });
+  kids.flat(9).forEach(c=>{if(c==null||c===false)return;e.appendChild(typeof c==="string"?document.createTextNode(c):c)});
+  return e;
+}
+function div(cls,...kids){return el("div",{cls},...kids)}
+function btn(cls,text,onClick){return el("button",{cls,onClick},text)}
+function inp(cls,placeholder,value,onInput,type){
+  const i=el("input",{cls,placeholder,value:value||"",type:type||"text"});
+  i.addEventListener("input",e=>onInput(e.target.value));
+  return i;
+}
+function field(label,child){return div("field",el("label",{},label),child)}
+
+const CATS={
+  restaurant:{l:"Restaurant",e:"🍽",c:"#B5532C"},
+  vinbar:{l:"Vinbar / bar",e:"🍷",c:"#7A3B45"},
+  seværdighed:{l:"Seværdighed",e:"🏛",c:"#3F5E55"},
+  hotel:{l:"Hotel",e:"🏨",c:"#5A4A3A"},
+  hus:{l:"Hus / lejlighed",e:"🏠",c:"#6B5B3E"},
+  cafe:{l:"Café",e:"☕",c:"#8B6914"},
+  shopping:{l:"Shopping",e:"🛍",c:"#7A4B8A"},
+  andet:{l:"Andet",e:"✦",c:"#9C8B6E"},
+};
+
+const TRANSPORT={fly:{l:"Flybillet",e:"✈️"},tog:{l:"Togbillet",e:"🚂"}};
+
+let state={
+  unlocked:sessionStorage.getItem("rjb2")===APP_PASSWORD,
+  trips:[],loaded:false,activeTrip:null,tab:"oversigt",bookMode:false
+};
+let saveTimer=null;
+
+function setState(p){Object.assign(state,typeof p==="function"?p(state):p);render()}
+
+async function loadTrips(){
+  const{data,error}=await db.from("trips_data").select("data").eq("id",1).single();
+  if(!error&&data)state.trips=data.data||[];
+  state.loaded=true;render();
+}
+
+function saveTrips(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async()=>{
+    await db.from("trips_data").update({data:state.trips,updated_at:new Date().toISOString()}).eq("id",1);
+  },2000);
+}
+
+function setupRealtime(){
+  db.channel("rjb_rt").on("postgres_changes",{event:"UPDATE",schema:"public",table:"trips_data"},p=>{
+    if(p.new&&p.new.data){state.trips=p.new.data;render();}
+  }).subscribe();
+}
+
+function mutate(fn){fn(state.trips);saveTrips();}
+function mutateTrip(fn){
+  const i=state.trips.findIndex(t=>t.id===state.activeTrip);
+  if(i<0)return;
+  fn(state.trips[i]);
+  saveTrips();
+}
+
+function render(){
+  const app=document.getElementById("app");
+  app.innerHTML="";
+  if(!state.unlocked){app.appendChild(renderLock());return;}
+  if(!state.loaded){app.appendChild(div("lock",div("lock-box",div("lock-logo","🗺"),el("div",{cls:"lock-title"},"Henter rejser…"))));return;}
+  if(state.bookMode&&state.activeTrip){app.appendChild(renderBook());return;}
+  if(!state.activeTrip){app.appendChild(renderHome());return;}
+  app.appendChild(renderTrip());
+}
+
+// ── LOCK ────────────────────────────────────────────────────────────────────
+function renderLock(){
+  let pw="";
+  const errEl=el("div",{cls:"lock-error"});
+  const pwInp=el("input",{cls:"lock-input",placeholder:"Adgangskode",type:"password"});
+  pwInp.addEventListener("input",e=>pw=e.target.value);
+  pwInp.addEventListener("keydown",e=>{if(e.key==="Enter")tryUnlock();});
+  function tryUnlock(){
+    if(pw===APP_PASSWORD){sessionStorage.setItem("rjb2",APP_PASSWORD);state.unlocked=true;loadTrips();setupRealtime();render();}
+    else errEl.textContent="Forkert kode – prøv igen";
+  }
+  return div("lock",div("lock-box",
+    el("div",{cls:"lock-logo"},"🗺"),
+    el("div",{cls:"lock-title"},"Rejsedagbog"),
+    el("div",{cls:"lock-sub"},"Jeres fælles rejsedagbog"),
+    pwInp,
+    el("button",{cls:"lock-btn",onClick:tryUnlock},"Åbn"),
+    errEl
+  ));
+}
+
+// ── HOME ────────────────────────────────────────────────────────────────────
+function renderHome(){
+  const wrap=el("div",{});
+  wrap.appendChild(div("start-bg",
+    div("start-eyebrow","Rejsedagbog"),
+    el("h1",{cls:"start-title"},"Jeres rejser"),
+    el("p",{cls:"start-sub"},"Billetter · Steder · Budget · Minder"),
+    div("start-wave")
+  ));
+
+  const body=div("",el("div",{style:"padding:16px 16px 90px"}));
+  const listEl=el("div",{});
+  body.querySelector("div").appendChild(listEl);
+
+  let showNew=state.trips.length===0;
+
+  function refresh(){
+    listEl.innerHTML="";
+
+    // data buttons
+    listEl.appendChild(el("div",{style:"display:flex;gap:8px;margin-bottom:16px"},
+      el("button",{cls:"btn btn-s btn-sm",style:"flex:1",onClick:doExport},"💾 Gem data"),
+      el("button",{cls:"btn btn-s btn-sm",style:"flex:1",onClick:doImport},"📂 Indlæs data"),
+    ));
+
+    state.trips.forEach(t=>{
+      const cnt=t.places?t.places.length:0;
+      const wish=(t.places||[]).filter(p=>p.status==="wish").length;
+      listEl.appendChild(el("div",{cls:"trip-card",onClick:()=>setState({activeTrip:t.id,tab:"oversigt"})},
+        div("trip-stamp",(t.destination||"???").slice(0,3).toUpperCase()),
+        el("div",{style:"flex:1"},
+          el("div",{cls:"trip-name"},t.name||"Unavngiven rejse"),
+          el("div",{cls:"trip-dest"},t.destination||""),
+          (t.start||t.end)?el("div",{cls:"trip-dates"},fmtDate(t.start)+(t.end?" → "+fmtDate(t.end):"")):"",
+          div("trip-meta",
+            cnt?el("span",{cls:"trip-badge"},"📍 "+cnt+" steder"):"",
+            wish?el("span",{cls:"trip-badge"},"🔖 "+wish+" ønsker"):"",
+          )
+        ),
+        el("button",{cls:"btn-trash",onClick:e=>{e.stopPropagation();if(confirm("Slet rejsen?"))mutate(ts=>{const i=ts.findIndex(x=>x.id===t.id);if(i>=0)ts.splice(i,1);});refresh();}},
+          "🗑")
+      ));
+    });
+
+    if(!showNew){
+      listEl.appendChild(el("button",{cls:"btn-ghost",onClick:()=>{showNew=true;refresh();}},"＋ Ny rejse"));
+    } else {
+      let name="",dest="",start="",end="";
+      const nameI=inp("inp","Navn (f.eks. Vintur til Alsace)","",v=>name=v);
+      const destI=inp("inp","Destination (f.eks. Frankrig & Italien)","",v=>dest=v);
+      const startI=inp("inp-sm","","",v=>start=v,"date");
+      const endI=inp("inp-sm","","",v=>end=v,"date");
+      listEl.appendChild(div("card",
+        el("div",{style:"font-family:Georgia,serif;font-size:18px;margin-bottom:14px;color:var(--brown)"},"Ny rejse"),
+        field("Navn på rejsen",nameI),
+        field("Destination",destI),
+        div("row",
+          el("div",{style:"flex:1"},el("label",{style:"display:block;font-size:11px;color:var(--brown3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px"},"Fra"),startI),
+          el("div",{style:"flex:1"},el("label",{style:"display:block;font-size:11px;color:var(--brown3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px"},"Til"),endI),
+        ),
+        div("btn-row",
+          el("button",{cls:"btn btn-s",style:"flex:1",onClick:()=>{showNew=false;refresh();}},"Annuller"),
+          el("button",{cls:"btn btn-p",style:"flex:1",onClick:()=>{
+            if(!name.trim()||!dest.trim())return;
+            const t={id:uid(),name,destination:dest,start,end,budget:"",stops:[],travelers:[],tickets:[],places:[],expenses:[],photos:[]};
+            mutate(ts=>ts.push(t));
+            setState({activeTrip:t.id,tab:"oversigt"});
+          }},"Opret rejse")
+        )
+      ));
+    }
+  }
+
+  function doExport(){
+    const json=JSON.stringify(state.trips,null,2);
+    const ta=el("textarea",{style:"width:100%;height:150px;font-family:monospace;font-size:11px;border:1px solid var(--border);border-radius:8px;padding:10px;resize:none"});
+    ta.value=json;
+    showModal(
+      el("div",{cls:"modal-drag"}),
+      el("div",{cls:"modal-title"},"💾 Gem data"),
+      el("div",{cls:"modal-sub"},"Kopier teksten og gem den i Notes. Brug 'Indlæs data' næste gang."),
+      ta,
+      el("button",{cls:"btn btn-g btn-w",style:"margin-top:10px",onClick:()=>{navigator.clipboard.writeText(json).then(()=>alert("Kopieret! ✓")).catch(()=>{ta.select();document.execCommand("copy");alert("Kopieret! ✓")})}},"Kopier til udklipsholder")
+    );
+  }
+
+  function doImport(){
+    const ta=el("textarea",{style:"width:100%;height:150px;font-family:monospace;font-size:11px;border:1px solid var(--border);border-radius:8px;padding:10px;resize:none",placeholder:"Indsæt gemt tekst her…"});
+    showModal(
+      el("div",{cls:"modal-drag"}),
+      el("div",{cls:"modal-title"},"📂 Indlæs data"),
+      el("div",{cls:"modal-sub"},"Indsæt den tekst du gemte med 'Gem data'."),
+      ta,
+      el("button",{cls:"btn btn-g btn-w",style:"margin-top:10px",onClick:()=>{
+        try{const d=JSON.parse(ta.value);if(Array.isArray(d)){mutate(ts=>{ts.length=0;d.forEach(x=>ts.push(x));});closeModal();render();}}
+        catch(e){alert("Ugyldig data");}
+      }},"Indlæs")
+    );
+  }
+
+  refresh();
+  wrap.appendChild(body);
+  return wrap;
+}
+
+// ── MODAL ───────────────────────────────────────────────────────────────────
+function showModal(...children){
+  const modal=div("modal",...children);
+  const overlay=div("overlay",modal);
+  overlay.addEventListener("click",e=>{if(e.target===overlay)overlay.remove();});
+  document.getElementById("app").appendChild(overlay);
+}
+function closeModal(){const o=document.querySelector(".overlay");if(o)o.remove();}
+
+// ── TRIP APP ────────────────────────────────────────────────────────────────
+function renderTrip(){
+  const trip=state.trips.find(t=>t.id===state.activeTrip);
+  if(!trip)return el("div",{});
+
+  const TABS=[
+    {id:"oversigt",l:"Oversigt",e:"✈️"},
+    {id:"steder",l:"Steder",e:"📍"},
+    {id:"budget",l:"Budget",e:"💰"},
+    {id:"billeder",l:"Billeder",e:"📷"},
+  ];
+
+  const contentEl=div("content");
+  function renderTabContent(){
+    contentEl.innerHTML="";
+    if(state.tab==="oversigt")contentEl.appendChild(renderOversigt(trip));
+    else if(state.tab==="steder")contentEl.appendChild(renderSteder(trip));
+    else if(state.tab==="budget")contentEl.appendChild(renderBudget(trip));
+    else if(state.tab==="billeder")contentEl.appendChild(renderBilleder(trip));
+  }
+
+  const tabBtns=TABS.map(t=>{
+    const b=el("button",{cls:"tabbtn"+(state.tab===t.id?" on":""),onClick:()=>{
+      state.tab=t.id;renderTabContent();
+      tabBtns.forEach((b2,i)=>b2.className="tabbtn"+(TABS[i].id===t.id?" on":""));
+    }},el("span",{cls:"tab-icon"},t.e),t.l);
+    return b;
+  });
+
+  renderTabContent();
+  return el("div",{},
+    div("header",
+      el("button",{cls:"hbtn",onClick:()=>setState({activeTrip:null})},"‹"),
+      div("header-title",el("h2",{},trip.name||"Rejse"),el("p",{},trip.destination||"")),
+      el("button",{cls:"hbtn",title:"Lav rejsebog",onClick:()=>setState({bookMode:true})},"📖")
+    ),
+    el("div",{cls:"tabbar"},...tabBtns),
+    contentEl
+  );
+}
+
+// ── OVERSIGT ────────────────────────────────────────────────────────────────
+function renderOversigt(trip){
+  const wrap=el("div",{});
+
+  // Travelers
+  const chipsEl=div("",{style:"display:flex;flex-wrap:wrap;margin-bottom:14px"});
+  function refreshChips(){
+    chipsEl.innerHTML="";
+    (trip.travelers||[]).forEach(n=>{
+      chipsEl.appendChild(el("span",{cls:"chip"},n,
+        el("button",{cls:"chip-x",onClick:()=>{trip.travelers=trip.travelers.filter(x=>x!==n);mutateTrip(()=>{});refreshChips();}},"✕")
+      ));
+    });
+  }
+  refreshChips();
+  let tname="";
+  const tInp=inp("inp","Tilføj rejsende (f.eks. Louise)","",v=>tname=v);
+  tInp.addEventListener("keydown",e=>{if(e.key==="Enter")addT();});
+  function addT(){if(!tname.trim())return;trip.travelers=[...(trip.travelers||[]),tname.trim()];mutateTrip(()=>{});tInp.value="";tname="";refreshChips();}
+
+  // Stops
+  const stopsEl=div("");
+  function refreshStops(){
+    stopsEl.innerHTML="";
+    if(!(trip.stops||[]).length){stopsEl.appendChild(div("empty",el("span",{cls:"empty-icon"},"🏠"),"Tilføj opholdssteder – f.eks. 5 dage i Cobisa og 2 dage i Madrid."));return;}
+    trip.stops.forEach((s,i)=>{
+      const placeI=inp("inp","Sted (f.eks. Cobisa)",s.place,v=>{s.place=v;mutateTrip(()=>{})});
+      const accI=inp("inp","Bolig / hotel navn",s.accommodation,v=>{s.accommodation=v;mutateTrip(()=>{})});
+      const linkI=inp("inp","Link til booking (Airbnb, Booking.com…)",s.link,v=>{s.link=v;mutateTrip(()=>{})});
+      const startI=inp("inp-sm","",s.start,v=>{s.start=v;mutateTrip(()=>{});},"date");
+      const endI=inp("inp-sm","",s.end,v=>{s.end=v;mutateTrip(()=>{});},"date");
+      stopsEl.appendChild(div("card",
+        div("card-head",
+          el("span",{cls:"card-icon"},"🏠"),
+          el("div",{cls:"card-label"},"Stop "+(i+1)),
+          el("button",{cls:"btn-trash",onClick:()=>{trip.stops.splice(i,1);mutateTrip(()=>{});refreshStops();}},"🗑")
+        ),
+        field("Sted",placeI),
+        div("row",
+          el("div",{style:"flex:1"},el("label",{style:"display:block;font-size:11px;color:var(--brown3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px"},"Ankomst"),startI),
+          el("div",{style:"flex:1"},el("label",{style:"display:block;font-size:11px;color:var(--brown3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px"},"Afrejse"),endI),
+        ),
+        el("div",{style:"margin-top:8px"},field("Bolig / hotel",accI)),
+        field("Booking-link",linkI)
+      ));
+    });
+  }
+  refreshStops();
+
+  // Tickets
+  const ticketsEl=div("");
+  function refreshTickets(){
+    ticketsEl.innerHTML="";
+    if(!(trip.tickets||[]).length){ticketsEl.appendChild(div("empty",el("span",{cls:"empty-icon"},"🎫"),"Tilføj fly- og togbilletter."));return;}
+    trip.tickets.forEach((tk,i)=>{
+      const fromI=inp("inp-sm","Fra",tk.from,v=>{tk.from=v;mutateTrip(()=>{})});
+      const toI=inp("inp-sm","Til",tk.to,v=>{tk.to=v;mutateTrip(()=>{})});
+      const dateI=inp("inp-sm","",tk.date,v=>{tk.date=v;mutateTrip(()=>{});},"date");
+      const timeI=inp("inp-sm","",tk.time,v=>{tk.time=v;mutateTrip(()=>{});},"time");
+      const refI=inp("inp","Bookingreference / sæde",tk.ref,v=>{tk.ref=v;mutateTrip(()=>{})});
+      ticketsEl.appendChild(div("card",
+        div("card-head",
+          el("span",{cls:"card-icon"},TRANSPORT[tk.type].e),
+          el("div",{cls:"card-label"},TRANSPORT[tk.type].l),
+          el("button",{cls:"btn-trash",onClick:()=>{trip.tickets.splice(i,1);mutateTrip(()=>{});refreshTickets();}},"🗑")
+        ),
+        div("row",fromI,toI),
+        el("div",{style:"margin-top:8px"},div("row",dateI,timeI)),
+        el("div",{style:"margin-top:8px"},refI)
+      ));
+    });
+  }
+  refreshTickets();
+
+  // Dates
+  const startI=inp("inp-sm","",trip.start,v=>{trip.start=v;mutateTrip(()=>{});},"date");
+  const endI=inp("inp-sm","",trip.end,v=>{trip.end=v;mutateTrip(()=>{});},"date");
+
+  wrap.appendChild(el("div",{cls:"sec"},"Rejsende"));
+  wrap.appendChild(chipsEl);
+  wrap.appendChild(div("row",tInp,el("button",{cls:"btn btn-g btn-sm",style:"flex-shrink:0",onClick:addT},"Tilføj")));
+
+  wrap.appendChild(el("div",{cls:"sec",style:"margin-top:20px"},"Datoer"));
+  wrap.appendChild(div("card",
+    div("row",
+      el("div",{style:"flex:1"},el("label",{style:"display:block;font-size:11px;color:var(--brown3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px"},"Fra"),startI),
+      el("div",{style:"flex:1"},el("label",{style:"display:block;font-size:11px;color:var(--brown3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px"},"Til"),endI),
+    )
+  ));
+
+  wrap.appendChild(el("div",{cls:"sec"},"Ophold"));
+  wrap.appendChild(stopsEl);
+  wrap.appendChild(el("button",{cls:"btn btn-s btn-sm",style:"margin-bottom:20px",onClick:()=>{if(!trip.stops)trip.stops=[];trip.stops.push({id:uid(),place:"",start:"",end:"",accommodation:"",link:""});mutateTrip(()=>{});refreshStops();}},"＋ Tilføj ophold"));
+
+  wrap.appendChild(el("div",{cls:"sec"},"Billetter"));
+  wrap.appendChild(div("row",
+    el("button",{cls:"btn btn-s btn-sm",onClick:()=>{if(!trip.tickets)trip.tickets=[];trip.tickets.push({id:uid(),type:"fly",from:"",to:"",date:"",time:"",ref:""});mutateTrip(()=>{});refreshTickets();}},"✈️ Flybillet"),
+    el("button",{cls:"btn btn-s btn-sm",onClick:()=>{if(!trip.tickets)trip.tickets=[];trip.tickets.push({id:uid(),type:"tog",from:"",to:"",date:"",time:"",ref:""});mutateTrip(()=>{});refreshTickets();}},"🚂 Togbillet"),
+  ));
+  el("div",{style:"margin-top:10px"});
+  wrap.appendChild(ticketsEl);
+  return wrap;
+}
+
+// ── STEDER ──────────────────────────────────────────────────────────────────
+function renderSteder(trip){
+  if(!trip.places)trip.places=[];
+  const wrap=el("div",{});
+
+  // Stats bar
+  const visited=(trip.places||[]).filter(p=>p.status==="visited");
+  const wishes=(trip.places||[]).filter(p=>p.status==="wish");
+
+  const statsEl=div("",
+    div("row",
+      div("card",{style:"flex:1;text-align:center;padding:12px"},
+        el("div",{style:"font-size:24px"},"✅"),
+        el("div",{style:"font-family:Georgia,serif;font-size:22px;color:var(--brown);margin-top:4px"},String(visited.length)),
+        el("div",{style:"font-size:11px;color:var(--brown3);text-transform:uppercase;letter-spacing:.1em;margin-top:2px"},"Besøgt")
+      ),
+      div("card",{style:"flex:1;text-align:center;padding:12px"},
+        el("div",{style:"font-size:24px"},"🔖"),
+        el("div",{style:"font-family:Georgia,serif;font-size:22px;color:var(--brown);margin-top:4px"},String(wishes.length)),
+        el("div",{style:"font-size:11px;color:var(--brown3);text-transform:uppercase;letter-spacing:.1em;margin-top:2px"},"Ønsker")
+      ),
+    )
+  );
+  wrap.appendChild(statsEl);
+
+  // Add form
+  let showForm=false;
+  let draft={name:"",category:"restaurant",note:"",date:"",status:"wish",source:"",link:""};
+
+  const formEl=div("");
+  const listEl=div("");
+
+  function refreshList(){
+    listEl.innerHTML="";
+    const byStatus={visited:[],wish:[]};
+    trip.places.forEach(p=>{ if(byStatus[p.status])byStatus[p.status].push(p); else byStatus.wish.push(p);});
+
+    ["wish","visited"].forEach(status=>{
+      const items=byStatus[status];
+      if(!items.length)return;
+      listEl.appendChild(el("div",{cls:"sec"},status==="wish"?"🔖 Ønsker at besøge":"✅ Besøgt"));
+      items.forEach(p=>{
+        const cat=CATS[p.category]||CATS.andet;
+        const metaEl=div("place-meta");
+        if(p.date)metaEl.appendChild(el("span",{},fmtDate(p.date)));
+        if(p.source)metaEl.appendChild(el("span",{},"Kilde: "+p.source));
+        const placeDiv=div("place-row",
+          el("span",{cls:"place-emoji"},cat.e),
+          div("place-info",
+            el("div",{cls:"place-name"},p.name),
+            el("span",{cls:status==="wish"?"wish-badge":"visited-badge"},status==="wish"?"🔖 Ønsker":"✅ Besøgt"),
+            p.note?el("div",{cls:"place-note"},p.note):"",
+            metaEl,
+            p.link?el("a",{cls:"place-link",href:p.link,target:"_blank"},"🔗 "+p.link):"",
+            status==="wish"?el("button",{cls:"move-btn",onClick:()=>{p.status="visited";p.date=p.date||new Date().toISOString().slice(0,10);mutateTrip(()=>{});refreshList();refreshStats();}},"✅ Marker som besøgt"):"",
+          ),
+          el("button",{cls:"btn-trash",onClick:()=>{trip.places=trip.places.filter(x=>x.id!==p.id);mutateTrip(()=>{});refreshList();refreshStats();}},"🗑")
+        );
+        listEl.appendChild(placeDiv);
+      });
+    });
+
+    if(!trip.places.length)listEl.appendChild(div("empty",el("span",{cls:"empty-icon"},"📍"),"Tilføj steder du vil besøge eller allerede har besøgt."));
+  }
+
+  function refreshStats(){
+    const v=(trip.places||[]).filter(p=>p.status==="visited").length;
+    const w=(trip.places||[]).filter(p=>p.status==="wish").length;
+    statsEl.querySelector("div:nth-child(1) div:nth-child(2)").textContent=String(v);
+    statsEl.querySelector("div:nth-child(2) div:nth-child(2)").textContent=String(w);
+  }
+
+  function refreshForm(){
+    formEl.innerHTML="";
+    if(!showForm){
+      formEl.appendChild(el("button",{cls:"btn-ghost",onClick:()=>{showForm=true;refreshForm();}},"＋ Tilføj sted"));
+      return;
+    }
+    const nameI=inp("inp","Navn (f.eks. Le Bistrot du Vin)","",v=>draft.name=v);
+    const noteI=el("textarea",{cls:"inp",placeholder:"Note – hvad er det godt for? Anbefalet af hvem?"});
+    noteI.addEventListener("input",e=>draft.note=e.target.value);
+    const sourceI=inp("inp","Kilde (f.eks. Wine Spectator, Instagram, ven)","",v=>draft.source=v);
+    const linkI=inp("inp","Link (URL til anmeldelse / hjemmeside)","",v=>draft.link=v);
+    const dateI=inp("inp","",draft.date,v=>draft.date=v,"date");
+
+    const catPills=div("cat-pills");
+    Object.entries(CATS).forEach(([key,cat])=>{
+      const p=el("button",{cls:"cat-pill",style:`border-color:${draft.category===key?cat.c:"var(--border)"};background:${draft.category===key?cat.c+"15":"#fff"};color:${draft.category===key?cat.c:"var(--brown2)"}`,
+        onClick:()=>{draft.category=key;refreshForm();}},cat.e+" "+cat.l);
+      catPills.appendChild(p);
+    });
+
+    const statusRow=div("row",
+      el("button",{cls:"btn btn-sm"+(draft.status==="wish"?" btn-p":" btn-s"),style:"flex:1",onClick:()=>{draft.status="wish";refreshForm();}},"🔖 Ønsker"),
+      el("button",{cls:"btn btn-sm"+(draft.status==="visited"?" btn-g":" btn-s"),style:"flex:1",onClick:()=>{draft.status="visited";refreshForm();}},"✅ Besøgt"),
+    );
+
+    formEl.appendChild(div("card",
+      field("Navn",nameI),
+      el("div",{cls:"field"},el("label",{},"Kategori"),catPills),
+      el("div",{cls:"field"},el("label",{},"Status"),statusRow),
+      field("Note",noteI),
+      field("Kilde",sourceI),
+      field("Link",linkI),
+      draft.status==="visited"?field("Dato",dateI):"",
+      div("btn-row",
+        el("button",{cls:"btn btn-s",style:"flex:1",onClick:()=>{showForm=false;draft={name:"",category:"restaurant",note:"",date:"",status:"wish",source:"",link:""};refreshForm();}},"Annuller"),
+        el("button",{cls:"btn btn-p",style:"flex:1",onClick:()=>{
+          if(!draft.name.trim())return;
+          trip.places.push({id:uid(),...draft});
+          mutateTrip(()=>{});
+          showForm=false;draft={name:"",category:"restaurant",note:"",date:"",status:"wish",source:"",link:""};
+          refreshForm();refreshList();refreshStats();
+        }},"Gem sted")
+      )
+    ));
+  }
+
+  refreshForm();refreshList();
+  wrap.appendChild(formEl);
+  wrap.appendChild(listEl);
+  return wrap;
+}
+
+// ── BUDGET ──────────────────────────────────────────────────────────────────
+function renderBudget(trip){
+  if(!trip.expenses)trip.expenses=[];
+  const wrap=el("div",{});
+  let draft={desc:"",amount:"",category:"mad",paidBy:""};
+
+  const heroEl=div("budget-hero");
+  const expListEl=div("");
+
+  function refreshHero(){
+    heroEl.innerHTML="";
+    const total=(trip.expenses||[]).reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
+    const budget=parseFloat(trip.budget)||0;
+    const remaining=budget-total;
+    const pct=budget>0?Math.min(100,(total/budget)*100):0;
+    const budgetI=inp("inp","Sæt budget (DKK)",trip.budget,v=>{trip.budget=v;mutateTrip(()=>{});});
+    budgetI.style.background="rgba(255,255,255,0.12)";
+    budgetI.style.border="1px solid rgba(255,255,255,0.2)";
+    budgetI.style.color="#fff";
+    heroEl.appendChild(field("Samlet budget (DKK)",budgetI));
+    heroEl.appendChild(div("budget-hero-row",
+      el("div",{},el("div",{cls:"budget-lbl"},"Brugt"),el("div",{cls:"budget-val"},total.toLocaleString("da-DK")+" kr")),
+      el("div",{style:"text-align:right"},el("div",{cls:"budget-lbl"},"Tilbage"),el("div",{cls:"budget-val"+(remaining<0?" warn":"")},remaining.toLocaleString("da-DK")+" kr")),
+    ));
+    if(budget>0)heroEl.appendChild(div("progress",el("div",{cls:"progress-fill"+(total>budget?" over":""),style:"width:"+pct+"%"})));
+  }
+
+  function refreshExpenses(){
+    expListEl.innerHTML="";
+    const byCat={};
+    (trip.expenses||[]).forEach(e=>{byCat[e.category]=(byCat[e.category]||0)+e.amount;});
+    if((trip.expenses||[]).length){
+      expListEl.appendChild(el("div",{cls:"sec"},"Udgifter"));
+      [...(trip.expenses||[])].reverse().forEach(e=>{
+        expListEl.appendChild(div("exp-row",
+          div("exp-info",el("div",{cls:"exp-desc"},e.desc),el("div",{cls:"exp-cat"},e.category+(e.paidBy?" · "+e.paidBy:""))),
+          el("div",{cls:"exp-amt"},e.amount.toLocaleString("da-DK")+" kr"),
+          el("button",{cls:"btn-trash",onClick:()=>{trip.expenses=trip.expenses.filter(x=>x.id!==e.id);mutateTrip(()=>{});refreshHero();refreshExpenses();}},"🗑")
+        ));
+      });
+    }
+  }
+
+  const descI=inp("inp","Hvad var det? (f.eks. Frokost i Beaune)","",v=>draft.desc=v);
+  const amtI=inp("inp-sm","Beløb (DKK)","",v=>draft.amount=v,"number");
+  const catSel=el("select",{cls:"inp-sm"});
+  ["mad","transport","ophold","oplevelser","vin","andet"].forEach(c=>{const o=el("option",{value:c},c.charAt(0).toUpperCase()+c.slice(1));catSel.appendChild(o);});
+  catSel.addEventListener("change",e=>draft.category=e.target.value);
+
+  refreshHero();
+  wrap.appendChild(heroEl);
+  wrap.appendChild(el("div",{cls:"sec"},"Registrer udgift"));
+  wrap.appendChild(div("card",
+    el("div",{style:"margin-bottom:8px"},descI),
+    div("row",amtI,catSel),
+    el("button",{cls:"btn btn-p btn-w",style:"margin-top:10px",onClick:()=>{
+      if(!draft.desc.trim()||!draft.amount)return;
+      trip.expenses.push({id:uid(),...draft,amount:parseFloat(draft.amount)});
+      mutateTrip(()=>{});
+      descI.value="";amtI.value="";draft={desc:"",amount:"",category:"mad",paidBy:""};
+      refreshHero();refreshExpenses();
+    }},"Tilføj udgift")
+  ));
+  refreshExpenses();
+  wrap.appendChild(expListEl);
+  return wrap;
+}
+
+// ── BILLEDER ────────────────────────────────────────────────────────────────
+function renderBilleder(trip){
+  if(!trip.photos)trip.photos=[];
+  const wrap=el("div",{});
+  const fileI=el("input",{type:"file",accept:"image/*",multiple:true,style:"display:none"});
+  fileI.addEventListener("change",e=>{
+    Array.from(e.target.files).forEach(file=>{
+      const r=new FileReader();
+      r.onload=()=>{trip.photos.push({id:uid(),src:r.result,caption:"",date:new Date().toISOString().slice(0,10)});mutateTrip(()=>{});refreshPhotos();};
+      r.readAsDataURL(file);
+    });
+  });
+  const gridEl=div("photo-grid");
+
+  function refreshPhotos(){
+    gridEl.innerHTML="";
+    if(!trip.photos.length){gridEl.appendChild(div("empty",{style:"grid-column:1/-1"},el("span",{cls:"empty-icon"},"📷"),"Tilføj billeder undervejs – de bruges i rejsebogen."));return;}
+    [...trip.photos].reverse().forEach(p=>{
+      const capI=el("input",{cls:"photo-cap",placeholder:"Billedtekst…",value:p.caption||""});
+      capI.addEventListener("input",e=>{p.caption=e.target.value;mutateTrip(()=>{});});
+      gridEl.appendChild(div("photo-card",
+        div("photo-wrap",
+          el("img",{src:p.src,style:"width:100%;height:130px;object-fit:cover;display:block"}),
+          el("button",{cls:"photo-del",onClick:()=>{trip.photos=trip.photos.filter(x=>x.id!==p.id);mutateTrip(()=>{});refreshPhotos();}},"🗑")
+        ),capI
+      ));
+    });
+  }
+
+  refreshPhotos();
+  wrap.appendChild(fileI);
+  wrap.appendChild(el("button",{cls:"btn-ghost",onClick:()=>fileI.click()},"📷  Tilføj billeder"));
+  wrap.appendChild(gridEl);
+  return wrap;
+}
+
+// ── BOOK ────────────────────────────────────────────────────────────────────
+function renderBook(){
+  const trip=state.trips.find(t=>t.id===state.activeTrip);
+  if(!trip)return el("div",{});
+
+  const days=[];
+  if(trip.start&&trip.end){
+    let d=new Date(trip.start+"T00:00:00");
+    const end=new Date(trip.end+"T00:00:00");
+    while(d<=end){days.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1);}
+  }
+
+  const total=(trip.expenses||[]).reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
+  const byCat={};
+  (trip.expenses||[]).forEach(e=>{byCat[e.category]=(byCat[e.category]||0)+e.amount;});
+  const visited=(trip.places||[]).filter(p=>p.status==="visited");
+  const undatedPhotos=(trip.photos||[]).filter(p=>!days.includes(p.date));
+  const undatedPlaces=visited.filter(p=>!p.date);
+
+  function bkH(text){return div("book-h2",el("h2",{},text),div("book-h2-line"));}
+
+  const secs=[];
+
+  // Cover
+  secs.push(div("book-cover",
+    div("book-eyebrow","Rejsedagbog"),
+    el("h1",{cls:"book-title"},trip.name||"Rejse"),
+    el("div",{cls:"book-dest"},trip.destination||""),
+    (trip.start||trip.end)?el("div",{cls:"book-dates"},fmtDateLong(trip.start)+(trip.end?" – "+fmtDateLong(trip.end):"")):"",
+    trip.travelers&&trip.travelers.length?el("div",{cls:"book-travelers"},trip.travelers.join(" · ")):"",
+  ));
+
+  // Facts
+  const factsSec=div("book-sec",bkH("Rejsefakta"),
+    div("facts",
+      ...[["Destination",trip.destination||"—"],["Antal dage",days.length||"—"],["Rejsende",(trip.travelers||[]).join(", ")||"—"],["Steder besøgt",visited.length],["Billeder",(trip.photos||[]).length],["Forbrug",total.toLocaleString("da-DK")+" kr"]].map(([l,v])=>
+        el("div",{},el("div",{cls:"fact-lbl"},l),el("div",{cls:"fact-val"},String(v)))
+      )
+    )
+  );
+
+  if((trip.stops||[]).length){
+    factsSec.appendChild(el("div",{cls:"book-subh"},"Ophold"));
+    trip.stops.forEach(s=>factsSec.appendChild(div("ticket-row","🏠 ",s.place+(s.accommodation?" — "+s.accommodation:"")+(s.start?" ("+fmtDate(s.start)+" – "+fmtDate(s.end)+")":""))));
+  }
+  if((trip.tickets||[]).length){
+    factsSec.appendChild(el("div",{cls:"book-subh"},"Billetter"));
+    trip.tickets.forEach(tk=>factsSec.appendChild(div("ticket-row",TRANSPORT[tk.type].e+" ",tk.from+" → "+tk.to+(tk.date?" "+fmtDate(tk.date):"")+(tk.time?" kl. "+tk.time:""))));
+  }
+  secs.push(factsSec);
+
+  // Days
+  days.forEach((day,i)=>{
+    const photos=(trip.photos||[]).filter(p=>p.date===day);
+    const places=visited.filter(p=>p.date===day);
+    const tickets=(trip.tickets||[]).filter(tk=>tk.date===day);
+    if(!photos.length&&!places.length&&!tickets.length)return;
+    const sec=div("book-sec",bkH("Dag "+(i+1)+" — "+fmtDateLong(day)));
+    tickets.forEach(tk=>sec.appendChild(div("ticket-row",TRANSPORT[tk.type].e+" ",tk.from+" → "+tk.to+" kl. "+tk.time)));
+    if(photos.length){const g=div("book-photo-grid");photos.forEach(p=>{const fig=el("figure",{style:"margin:0"},el("img",{cls:"book-photo",src:p.src}));if(p.caption)fig.appendChild(el("figcaption",{cls:"book-cap"},p.caption));g.appendChild(fig);});sec.appendChild(g);}
+    places.forEach(p=>{const cat=CATS[p.category]||CATS.andet;sec.appendChild(div("book-place-row",el("span",{style:"font-size:20px"},cat.e),el("div",{},el("div",{style:"font-family:Georgia,serif;font-size:15px;color:var(--brown)"},p.name),p.note?el("div",{style:"font-size:13px;color:var(--brown3)"},p.note):"")));});
+    secs.push(sec);
+  });
+
+  // Undated places
+  if(undatedPlaces.length){
+    const sec=div("book-sec",bkH("Steder & oplevelser"));
+    Object.entries(CATS).forEach(([key,cat])=>{
+      const items=undatedPlaces.filter(p=>p.category===key);
+      if(!items.length)return;
+      sec.appendChild(el("div",{cls:"book-subh"},cat.e+" "+cat.l));
+      items.forEach(p=>sec.appendChild(el("div",{style:"margin-bottom:10px"},el("div",{style:"font-family:Georgia,serif;font-size:15px"},p.name),p.note?el("div",{style:"font-size:13px;color:var(--brown3)"},p.note):"")));
+    });
+    secs.push(sec);
+  }
+
+  // Undated photos
+  if(undatedPhotos.length){
+    const g=div("book-photo-grid");
+    undatedPhotos.forEach(p=>{const fig=el("figure",{style:"margin:0"},el("img",{cls:"book-photo",src:p.src}));if(p.caption)fig.appendChild(el("figcaption",{cls:"book-cap"},p.caption));g.appendChild(fig);});
+    secs.push(div("book-sec",bkH("Billeder"),g));
+  }
+
+  // Budget
+  const budgetSec=div("book-sec",bkH("Budget"),
+    div("facts",
+      el("div",{},el("div",{cls:"fact-lbl"},"Budget"),el("div",{cls:"fact-val"},trip.budget?parseFloat(trip.budget).toLocaleString("da-DK")+" kr":"—")),
+      el("div",{},el("div",{cls:"fact-lbl"},"Forbrug"),el("div",{cls:"fact-val"},total.toLocaleString("da-DK")+" kr")),
+    )
+  );
+  Object.entries(byCat).forEach(([cat,amt])=>budgetSec.appendChild(div("book-budget-row",el("span",{},cat),el("span",{style:"font-family:monospace"},amt.toLocaleString("da-DK")+" kr"))));
+  secs.push(budgetSec);
+  secs.push(div("book-footer","— Lavet med jeres rejsedagbog —"));
+
+  return el("div",{},
+    div("header no-print",
+      el("button",{cls:"hbtn",onClick:()=>setState({bookMode:false})},"‹"),
+      div("header-title",el("h2",{},"Rejsebog")),
+      el("button",{cls:"hbtn",onClick:()=>window.print()},"🖨")
+    ),
+    div("book-page",...secs)
+  );
+}
+
+// ── INIT ────────────────────────────────────────────────────────────────────
+if(state.unlocked){loadTrips();setupRealtime();}
+render();
+</script>
+</body>
+</html>
